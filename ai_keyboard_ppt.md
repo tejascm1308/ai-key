@@ -10,227 +10,251 @@
 > *"What if AI lived where work actually happens — at the point of input?"*
 
 ```
-Today:     Human → Keyboard → Dumb Text → App (context lost)
-Our Vision: Human → Keyboard → AI Layer → Smart Intent → App (context preserved)
-```
+Today:     Human → Keyboard → Text → Application
+                                ↓
+                        (context lost)
 
-**The keyboard becomes a real-time collaborator — invisible, instant, intelligent.**
+Our Vision: Human → Keyboard → AI Layer → Intent → Application
+                                  ↓
+                    • Understands what you're doing
+                    • Knows which app you're in
+                    • Adapts to your style
+```
 
 Team: [Your Team Name] | Hackathon: Final Round AI
 
-🖼️ *Image: Futuristic keyboard with neural network glow*
-
 ---
 
-## Slide 2: Problem & Gap Analysis
+## Slide 2: Problem & Gap
 
 ### The Keyboard Paradox
 
-| What Keyboard Does | What It Should Do |
-|-------------------|-------------------|
-| Captures keystrokes passively | Understands intent actively |
-| Same behavior everywhere | Adapts per app & context |
-| No memory across apps | Shared context intelligence |
+The keyboard is the most used interface in modern work — yet it understands nothing.
 
-### Current Solutions Are Siloed
+| Current State | Ideal State |
+|--------------|-------------|
+| Passive input device | Active collaborator |
+| Same behavior everywhere | Context-aware adaptation |
+| No memory | Learns and remembers |
 
-| Tool | Limitation |
-|------|-----------|
-| **Grammarly** | Writing only, overlay-based, no context across apps |
-| **Copilot** | Code only, IDE-specific |
-| **ChatGPT** | Requires copy-paste, context switching |
-| **Whisper** | Transcription only, no intent understanding |
+### Gap in Existing Tools
 
-**The Gap:** No universal AI at the input layer with shared context.
+| Tool | What's Missing |
+|------|----------------|
+| Grammarly | Works only in writing apps, not universal |
+| GitHub Copilot | Code only, IDE-specific |
+| ChatGPT | Requires copy-paste, breaks flow |
+| Voice assistants | Transcription only, no context |
 
-🖼️ *Image: Fragmented tools, user switching between apps*
-
----
-
-## Slide 3: Our Unique Approach
-
-### What Makes Our Solution Different
-
-**We're not just building "AI + Keyboard". We built 5 standout strategies:**
-
-| Strategy | Our Approach | Others Would Do |
-|----------|--------------|-----------------|
-| **Context Mesh** | Tools share unified state, auto-trigger each other | Isolated tool calls |
-| **Confidence Routing** | Analyze audio before choosing Whisper model | Always call same API |
-| **Predictive Pre-compute** | Compute suggestions BEFORE user needs them | Wait for user input |
-| **Tentacle Architecture** | One brain + multiple thin clients | Rebuild per platform |
-| **Behavioral Fingerprint** | Learn from accept/reject, build anti-patterns | Basic user settings |
-
-### The Core Innovation
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     CONTEXT MESH                            │
-│  (Not just tools, but tools that COLLABORATE)               │
-│                                                             │
-│   detect_context ←→ complete_intent ←→ enhance_text         │
-│         ↓                ↓                  ↓               │
-│         └────────── SHARED STATE ──────────┘                │
-│                                                             │
-│   When one tool learns something, ALL tools know it.        │
-└─────────────────────────────────────────────────────────────┘
-```
+**No solution provides universal AI at the input layer.**
 
 ---
 
-## Slide 4: Context-Aware Switching
+## Slide 3: Solution Overview
 
-### Seamless App Switching in <50ms
+### AI Keyboard: Universal Intelligence Layer
 
-**How it works practically:**
+```
+            ┌───────────────────────────┐
+            │    🧠 AI KEYBOARD LAYER   │
+            │                           │
+            │  • Context Detection      │
+            │  • Intent Understanding   │
+            │  • Adaptive Suggestions   │
+            │  • Personalized Learning  │
+            └───────────────────────────┘
+                        ↕
+    ┌─────────┬─────────┬─────────┬─────────┐
+    │  Email  │  Code   │  Chat   │  Docs   │
+    │ (Gmail) │(VS Code)│ (Slack) │(Notion) │
+    └─────────┴─────────┴─────────┴─────────┘
+```
+
+### Core Capabilities
+
+| Capability | Description |
+|------------|-------------|
+| **Context Mesh** | Unified context shared across all tools |
+| **Smart Voice** | Voice input with intent understanding |
+| **Instant Response** | <100ms through local-first processing |
+| **Silent Learning** | Learns from usage, no configuration |
+
+---
+
+## Slide 4: How Context Switching Works
+
+### Automatic Adaptation in <50ms
+
 ```
 ┌────────────────────────────────────────────────────────────┐
-│ VS Code → User types "def calc_"                           │
-│ Context: {app: vscode, lang: python}                       │
-│ Suggests: "def calculate_total(items: list) -> float:"     │
+│ VS Code                                                    │
+│ Context: {app: vscode, language: python}                   │
+│                                                            │
+│ User types: "def calc_"                                    │
+│ Suggests: "def calculate_total(items: list) -> float:"    │
 ├────────────────────────────────────────────────────────────┤
-│ Alt+Tab → Gmail                                            │
-│ 🔔 SWITCH DETECTED (<50ms)                                 │
+│ User switches to Gmail (Alt+Tab)                           │
+│ 🔔 Context switch detected                                 │
 │ Context: {app: gmail, mode: compose}                       │
+│                                                            │
 │ User types: "Hi, I wanted to"                              │
 │ Suggests: "Hi, I wanted to update you on the progress..."  │
 ├────────────────────────────────────────────────────────────┤
-│ Click → Slack                                              │
-│ 🔔 SWITCH DETECTED (<50ms)                                 │
+│ User switches to Slack                                     │
+│ 🔔 Context switch detected                                 │
 │ Context: {app: slack, channel: #team}                      │
+│                                                            │
 │ User types: "done with"                                    │
 │ Suggests: "done with the deploy ✅"                        │
 └────────────────────────────────────────────────────────────┘
 ```
 
-**Why it's instant:** Pre-loaded context cache per app. No API call on switch.
+**Pre-loaded context profiles enable instant switching.**
 
 ---
 
-## Slide 5: Architecture — One Brain, Many Tentacles
+## Slide 5: Architecture
+
+### Core Engine + Lightweight Interfaces
 
 ```
 ┌────────────────────────────────────────────────────────────┐
 │                    CORE AI ENGINE                          │
-│              (Local background service)                    │
+│              (Runs as local service)                       │
+│                                                            │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  MCP SERVER + CONTEXT MESH                           │  │
-│  │  • Tools auto-chain: voice → context → enhance       │  │
-│  │  • Shared state pool across all operations           │  │
-│  │  • Priority queue: fast local, slow cloud async      │  │
+│  │  MCP SERVER                                          │  │
+│  │  • transcribe_voice   (Whisper integration)          │  │
+│  │  • enhance_text       (Context-aware rewriting)      │  │
+│  │  • complete_intent    (Predict user needs)           │  │
+│  │  • detect_context     (App identification)           │  │
+│  │                                                      │  │
+│  │  Shared Context Pool — all tools access same state   │  │
 │  └──────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────┘
-                          ↑ WebSocket (streaming)
+                          ↑ WebSocket
           ┌───────────────┼───────────────┐
           ↓               ↓               ↓
     ┌──────────┐    ┌──────────┐    ┌──────────┐
     │ Browser  │    │ Desktop  │    │   IDE    │
     │Extension │    │   App    │    │Extension │
     └──────────┘    └──────────┘    └──────────┘
-    
-    THIN CLIENTS: Only capture + display
-    ALL INTELLIGENCE: Lives in Core
 ```
 
-**Add new platform = add new tentacle (1-2 days work)**
+**Single intelligence layer, multiple access points.**
 
 ---
 
-## Slide 6: Speed Strategy — Three Layers + Prediction
+## Slide 6: Speed & Latency
+
+### Three-Layer Speed System
 
 ```
 USER TYPING
      ↓
 ┌─────────────────────────────────────────────────────────┐
 │ LAYER 1: CACHE (0-10ms)                                 │
-│ • User's common phrases, recent suggestions             │
+│ • Common phrases, recent suggestions                    │
+│ • Example: "Best regards" → instant                     │
 ├─────────────────────────────────────────────────────────┤
 │ LAYER 2: LOCAL MODEL (10-100ms)                         │
-│ • Small model on device, zero network latency           │
+│ • Small model on device, no network delay               │
+│ • Example: Typo fixes, simple completions               │
 ├─────────────────────────────────────────────────────────┤
-│ LAYER 3: CLOUD LLM (100-500ms, streamed)                │
-│ • Complex tasks, response streams token-by-token        │
+│ LAYER 3: CLOUD LLM (100-500ms)                          │
+│ • Complex rewrites, streamed token-by-token             │
+│ • Runs in background while user continues               │
 └─────────────────────────────────────────────────────────┘
-
-PREDICTIVE PRE-COMPUTATION:
-User types "Dear Mr." → AI already computing greetings, templates
-By time user types next char → suggestions READY
 ```
 
-**70% served from cache/local = feels like native OS feature**
+### Predictive Pre-computation
+
+User types "Dear Mr." → System pre-computes greetings, templates, likely continuations.
+
+**Suggestions ready before user needs them.**
 
 ---
 
-## Slide 7: Smart Voice — Beyond Transcription
+## Slide 7: Voice + Text Hybrid
+
+### Intelligent Voice Input
 
 ```
 AUDIO INPUT
      ↓
 ┌─────────────────────────────────────────────────────────┐
-│ CONFIDENCE-BASED ROUTING (our standout)                 │
-│ ───────────────────────────────────────                 │
-│ Analyze audio FIRST (50ms):                             │
-│ • Clear + Short → Local Whisper-Tiny (50ms)             │
-│ • Clear + Long → Local Whisper-Base (200ms)             │
-│ • Noisy → Cloud Whisper API (500ms)                     │
+│ AUDIO ANALYSIS                                          │
+│ • Quality assessment: clear vs noisy                    │
+│ • Duration check: short vs long                         │
+│ • Route to optimal model                                │
+├─────────────────────────────────────────────────────────┤
+│ SMART ROUTING                                           │
+│ • Clear + Short → Local model (50ms)                    │
+│ • Noisy/Long → Cloud API (500ms)                        │
 ├─────────────────────────────────────────────────────────┤
 │ INTENT ENHANCEMENT                                      │
-│ ─────────────────                                       │
+│                                                         │
 │ Raw: "email john about friday deadline"                 │
 │                    ↓                                    │
-│ Structured: {action: email, to: john, topic: deadline}  │
-│                    ↓                                    │
-│ Output: Full formatted email ready to send              │
+│ Output: Formatted email with greeting, body, signoff    │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Others transcribe. We understand intent.**
+**Voice captures ideas. AI delivers polished, contextual output.**
 
 ---
 
-## Slide 8: Personalization — Behavioral Fingerprint
+## Slide 8: Personalization
+
+### Learning Through Usage
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ LAYER 1: EXPLICIT                                       │
-│ • Role, language, basic preferences (set once)          │
+│ LAYER 1: EXPLICIT SETTINGS                              │
+│ • Role, language, tone preference                       │
+│ • Set once during setup                                 │
 ├─────────────────────────────────────────────────────────┤
-│ LAYER 2: OBSERVED (silent learning)                     │
-│ • Typing patterns, common phrases, emoji usage          │
-│ • Different profile per context (email vs slack)        │
+│ LAYER 2: OBSERVED PATTERNS                              │
+│ • Common phrases you use                                │
+│ • Typing speed and pause patterns                       │
+│ • Different behavior per app (formal email, casual chat)│
 ├─────────────────────────────────────────────────────────┤
-│ LAYER 3: FEEDBACK LOOP                                  │
-│ • Track accept/reject ratio per suggestion type         │
-│ • Build ANTI-PATTERNS: things to never suggest          │
-│ • User edits "utilize" → "use" → learns permanently     │
+│ LAYER 3: FEEDBACK LEARNING                              │
+│ • Tracks which suggestions you accept/reject            │
+│ • Learns from your edits                                │
+│ • Builds "avoid" list for things you never use          │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**One week usage = AI writes like the user. Zero configuration.**
+**After one week of usage, suggestions match your writing style.**
 
 ---
 
-## Slide 9: Summary & MVP
+## Slide 9: Summary & Scope
 
-### Our Standout Strategies
+### What AI Keyboard Delivers
 
-| Module | Our Approach |
-|--------|--------------|
-| **MCP** | Context Mesh — tools collaborate, not isolated |
-| **Voice** | Confidence routing — smart model selection |
-| **Speed** | Predictive pre-compute — suggestions ready before needed |
-| **Platform** | Tentacle architecture — one brain, many interfaces |
-| **Personalization** | Behavioral fingerprint — learns from behavior |
+| Feature | Benefit |
+|---------|---------|
+| **Universal Access** | Works across all apps and platforms |
+| **Context Aware** | Adapts to what you're doing |
+| **Instant Response** | <100ms with local-first approach |
+| **Voice + Text** | Speak ideas, get formatted output |
+| **Personal** | Learns your style automatically |
 
-### Hackathon MVP
+### Hackathon Deliverables
 
-✅ Core MCP Server with Context Mesh  
-✅ Chrome extension (first tentacle)  
-✅ Smart Whisper integration  
-✅ Real-time streaming suggestions  
-✅ Basic personalization (Layer 1 + 2)  
+✅ Core MCP Server with context engine  
+✅ Chrome browser extension  
+✅ Whisper voice integration  
+✅ Real-time suggestions  
+✅ Usage-based personalization  
 
-### Team [YOUR NAME]
+### Team
+
+| Member | Role |
+|--------|------|
+| [Name] | [Role] |
 
 > **"Making every keystroke intelligent."**
 
@@ -238,6 +262,10 @@ AUDIO INPUT
 
 ## Design Notes
 
-**Theme:** Dark + Electric blue/purple  
+**Theme:** Dark + Blue/Purple accents  
 **Font:** Inter or Roboto  
-**Images:** "AI keyboard neural" / "context switching" / "microservices"
+
+**Images to search:**
+- Slide 1: "AI keyboard concept futuristic"
+- Slide 2: "productivity app switching"
+- Slide 5: "clean architecture diagram"
