@@ -421,6 +421,313 @@ Core engine doesn't care which tentacle sent it — processes uniformly.
 
 ---
 
+## Module 4.1: App & Browser Data Access — How We Capture Context
+
+### Overview
+
+The AI Keyboard needs to understand the user's context to provide relevant suggestions. This requires accessing data from apps and browsers in a controlled, privacy-respecting manner.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        DATA ACCESS LAYERS                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  LAYER 1: INPUT CAPTURE (What user types)                                   │
+│  ─────────────────────────────────────────                                  │
+│  • Text from active input field                                             │
+│  • Cursor position                                                          │
+│  • Selection (if any)                                                       │
+│                                                                             │
+│  LAYER 2: APP CONTEXT (Where they're typing)                                │
+│  ────────────────────────────────────────────                               │
+│  • Active application name                                                  │
+│  • Window title                                                             │
+│  • URL (for browsers)                                                       │
+│  • Input field type/name                                                    │
+│                                                                             │
+│  LAYER 3: ENRICHED CONTEXT (What they're doing)                             │
+│  ───────────────────────────────────────────────                            │
+│  • Email: Recipient, thread context                                         │
+│  • Code: File type, function name, imports                                  │
+│  • Chat: Channel name, conversation history                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Browser Extension Data Access
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   BROWSER EXTENSION DATA ACCESS                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PERMISSIONS REQUIRED (manifest.json):                                      │
+│  ──────────────────────────────────────                                     │
+│  • activeTab        → Access current tab only                               │
+│  • tabs             → Detect tab switches                                   │
+│  • storage          → Store local preferences                               │
+│  • contextMenus     → Right-click menu integration                          │
+│                                                                             │
+│  HOW WE CAPTURE INPUT:                                                      │
+│  ─────────────────────                                                      │
+│  1. Content script injected into all pages                                  │
+│  2. MutationObserver watches for input/textarea/contenteditable            │
+│  3. Event listeners on focus, input, keydown events                         │
+│  4. On input change → capture text → send to core engine                    │
+│                                                                             │
+│  WHAT WE ACCESS:                                                            │
+│  ────────────────                                                           │
+│  ✓ Input field value (text being typed)                                     │
+│  ✓ Input field attributes (id, name, type, placeholder)                     │
+│  ✓ Page URL (for context detection)                                         │
+│  ✓ Page title                                                               │
+│  ✓ DOM structure around input (for positioning suggestions)                 │
+│                                                                             │
+│  WHAT WE DON'T ACCESS:                                                      │
+│  ─────────────────────                                                      │
+│  ✗ Cookies                                                                  │
+│  ✗ LocalStorage/SessionStorage                                              │
+│  ✗ Network requests                                                         │
+│  ✗ Other tabs' content                                                      │
+│  ✗ Browsing history                                                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Browser Context Detection (Practical Examples)
+
+```
+GMAIL DETECTION:
+────────────────
+URL Pattern: mail.google.com/*
+DOM Analysis:
+  ├── Compose window detected: div[aria-label="Message Body"]
+  ├── Recipient extracted: input[aria-label="To"]
+  ├── Subject extracted: input[name="subjectbox"]
+  └── Thread context: Previous messages in conversation
+
+Context Object:
+{
+  "app": "Gmail",
+  "mode": "compose",
+  "recipient": "john@example.com",
+  "subject": "Project Update",
+  "thread_length": 3,
+  "formality_hint": "professional"
+}
+
+─────────────────────────────────────────────────────────────────────────────
+
+SLACK WEB DETECTION:
+────────────────────
+URL Pattern: app.slack.com/client/*
+DOM Analysis:
+  ├── Channel name: div[data-qa="channel_name"]
+  ├── Message input: div[data-qa="message_input"]
+  └── DM vs Channel: URL path analysis
+
+Context Object:
+{
+  "app": "Slack",
+  "mode": "channel",
+  "channel_name": "#engineering",
+  "workspace": "mycompany",
+  "formality_hint": "casual"
+}
+
+─────────────────────────────────────────────────────────────────────────────
+
+LINKEDIN DETECTION:
+───────────────────
+URL Pattern: linkedin.com/*
+DOM Analysis:
+  ├── Message compose: div[aria-label="Write a message"]
+  ├── Post compose: div[data-placeholder*="Start a post"]
+  └── Comment: form.comments-comment-box
+
+Context Object:
+{
+  "app": "LinkedIn",
+  "mode": "message" | "post" | "comment",
+  "formality_hint": "professional"
+}
+```
+
+### Desktop App Data Access
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   DESKTOP APP DATA ACCESS                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WINDOWS ACCESS MECHANISMS:                                                 │
+│  ──────────────────────────                                                 │
+│  1. Window Detection:                                                       │
+│     └── GetForegroundWindow() → returns active window handle                │
+│     └── GetWindowText() → returns window title                              │
+│     └── GetWindowModuleFileName() → returns process name                    │
+│                                                                             │
+│  2. Keyboard Hooks:                                                         │
+│     └── SetWindowsHookEx(WH_KEYBOARD_LL) → global keyboard hook             │
+│     └── Captures all keystrokes system-wide                                 │
+│     └── Filter: Only process when in supported apps                         │
+│                                                                             │
+│  3. Clipboard Integration:                                                  │
+│     └── Monitor clipboard for selected text rewrite                         │
+│     └── Paste suggestions directly (optional)                               │
+│                                                                             │
+│  macOS ACCESS MECHANISMS:                                                   │
+│  ─────────────────────────                                                  │
+│  1. Window Detection:                                                       │
+│     └── NSWorkspace.shared.frontmostApplication                             │
+│     └── AXUIElement for accessibility-based window info                     │
+│                                                                             │
+│  2. Keyboard Events:                                                        │
+│     └── CGEvent.tapCreate() → global event tap                              │
+│     └── Requires Accessibility permission                                   │
+│                                                                             │
+│  Linux ACCESS MECHANISMS:                                                   │
+│  ─────────────────────────                                                  │
+│  1. Window Detection:                                                       │
+│     └── xdotool getactivewindow → active window ID                          │
+│     └── xprop -id [window_id] → window properties                           │
+│                                                                             │
+│  2. Keyboard Events:                                                        │
+│     └── XRecord extension or /dev/input                                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### App-Specific Context Extraction
+
+```
+VS CODE (via Extension API):
+────────────────────────────
+Access:
+├── vscode.window.activeTextEditor → Current file
+├── editor.document.languageId → Programming language
+├── editor.document.fileName → File path
+├── vscode.workspace.name → Project name
+└── editor.selection → Selected text
+
+Context Object:
+{
+  "app": "vscode",
+  "mode": "coding",
+  "language": "python",
+  "file": "main.py",
+  "project": "ai-keyboard",
+  "function_context": "def calculate_score",
+  "imports": ["numpy", "pandas"]
+}
+
+─────────────────────────────────────────────────────────────────────────────
+
+NATIVE EMAIL CLIENTS (Outlook, Apple Mail):
+───────────────────────────────────────────
+Detection: Window title parsing
+├── Outlook: "Message (HTML) - [Subject]"
+├── Apple Mail: "New Message" or "[Subject]"
+
+Context (limited without deep integration):
+{
+  "app": "Outlook",
+  "mode": "compose",
+  "subject": "Extracted from title",
+  "formality_hint": "professional"
+}
+
+─────────────────────────────────────────────────────────────────────────────
+
+TERMINAL / COMMAND LINE:
+────────────────────────
+Detection: Process name (cmd, powershell, Terminal, iTerm)
+
+Context:
+{
+  "app": "terminal",
+  "mode": "command",
+  "shell": "bash",
+  "cwd": "/home/user/project",
+  "last_command": "git status"
+}
+```
+
+### Data Flow Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           DATA FLOW                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  USER ACTION                                                                │
+│      ↓                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ TENTACLE (Browser Extension / Desktop App / IDE Extension)         │   │
+│  │                                                                     │   │
+│  │ 1. Detect input event (keystroke, focus, selection)                │   │
+│  │ 2. Capture current text + cursor position                          │   │
+│  │ 3. Extract app context (URL, window, file)                         │   │
+│  │ 4. Check blocklist (skip if blocked)                               │   │
+│  │ 5. Send to Core Engine via WebSocket                               │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│      ↓ WebSocket (localhost:PORT)                                          │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ CORE ENGINE                                                         │   │
+│  │                                                                     │   │
+│  │ 1. Receive input + context                                         │   │
+│  │ 2. Classify context (email/code/chat/etc)                          │   │
+│  │ 3. Load user profile for this context                              │   │
+│  │ 4. Generate suggestions (cache → local → cloud)                    │   │
+│  │ 5. Send suggestions back to tentacle                               │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│      ↓ WebSocket Response                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ TENTACLE                                                            │   │
+│  │                                                                     │   │
+│  │ 1. Receive suggestions                                             │   │
+│  │ 2. Display overlay/inline suggestion                               │   │
+│  │ 3. Handle accept/reject (Tab/Esc)                                  │   │
+│  │ 4. Insert accepted text into input field                           │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│      ↓                                                                      │
+│  USER SEES SUGGESTION                                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Privacy Boundaries in Data Access
+
+```
+DATA ACCESS PRINCIPLES:
+───────────────────────
+
+1. MINIMAL ACCESS
+   └── Only capture what's needed for suggestions
+   └── Don't read entire page content
+   └── Don't access unrelated DOM elements
+
+2. JUST-IN-TIME ACCESS
+   └── Capture only when user is actively typing
+   └── Don't background-scan content
+   └── Stop capturing when user focuses away
+
+3. NO PERSISTENCE BY DEFAULT
+   └── Text input not stored permanently
+   └── Only store: context patterns, preferences
+   └── User can enable history (opt-in)
+
+4. TRANSPARENT ACCESS
+   └── User can see what data is being captured
+   └── Settings show "Currently tracking: Gmail - Compose"
+   └── Pause button stops all capture immediately
+```
+
+---
+
 ## Module 5: Personalization — Behavioral Fingerprint
 
 ### The Problem
@@ -567,9 +874,139 @@ An AI keyboard captures **everything** the user types — this is sensitive data
 
 | Category | Examples | Handling |
 |----------|----------|----------|
-| 🔴 **Never Captured** | Password fields, credit cards, OTP | Automatic exclusion |
-| 🟡 **Local Only** | User profile, typing patterns, context cache | Never sent to cloud |
-| 🟢 **Cloud Eligible** | Text for rewriting, audio for transcription | With user consent only |
+| 🔴 **Never Captured** | Password fields, credit cards, OTP, SSN | Automatic exclusion |
+| 🟠 **Protected Content** | Emails, chat messages, documents | Used but not stored |
+| 🟡 **Learned Patterns** | User preferences, common phrases, tone | Stored locally, encrypted |
+| 🟢 **Cloud Eligible** | Text snippets for rewriting | With user consent only |
+
+### Email & Chat: How We USE vs STORE
+
+**The Key Distinction:**
+- We **USE** your email/chat content → to generate relevant suggestions
+- We **LEARN patterns** from your content → to personalize future suggestions
+- We **DON'T STORE** the actual content → your messages stay private
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   USE vs STORE: THE DIFFERENCE                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT WE DO WITH YOUR EMAIL/CHAT:                                           │
+│  ────────────────────────────────                                           │
+│                                                                             │
+│  1. READ (temporarily) → to understand what you're writing                  │
+│  2. ANALYZE → detect tone, intent, context                                  │
+│  3. SUGGEST → provide relevant completions                                  │
+│  4. LEARN PATTERNS → extract preferences (not content)                      │
+│  5. DISCARD CONTENT → clear from memory after use                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+EXAMPLE FLOW:
+─────────────
+You type: "Hi John, I wanted to follow up on our meeting yesterday..."
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STEP 1: READ                                                               │
+│  └── AI sees your text to understand context                                │
+│                                                                             │
+│  STEP 2: LEARN (what we store)                                              │
+│  └── User prefers "Hi [Name]" greeting                                      │
+│  └── User writes professional emails                                        │
+│  └── User often follows up on meetings                                      │
+│  └── Gmail context → formal tone                                            │
+│                                                                             │
+│  STEP 3: SUGGEST                                                            │
+│  └── "...and wanted to share the action items we discussed."                │
+│                                                                             │
+│  STEP 4: DISCARD (what we don't store)                                      │
+│  └── "Hi John, I wanted to follow up..." → NOT SAVED                        │
+│  └── Recipient "John" → NOT SAVED                                           │
+│  └── Meeting details → NOT SAVED                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### What We Store for Personalization
+
+```
+STORED LOCALLY (Encrypted) — for personalization:
+──────────────────────────────────────────────────
+
+PATTERNS LEARNED:
+├── Greeting style: "Hi [Name]," in emails
+├── Sign-off preference: "Best regards,"
+├── Tone per app: Formal in Gmail, Casual in Slack
+├── Common phrases: ["sounds good", "let's sync", "LGTM"]
+├── Typing speed: 65 WPM average
+├── Active hours: 10am-6pm weekdays
+└── Emoji usage: Rarely in emails, often in chat
+
+SUGGESTION FEEDBACK:
+├── Which suggestions you accept
+├── Which suggestions you reject
+├── Patterns in how you edit suggestions
+└── Anti-patterns (things you never want suggested)
+
+CONTEXT PREFERENCES:
+├── Gmail → professional, no emoji
+├── Slack #team → casual, use emoji
+├── VS Code → technical, concise
+└── LinkedIn → professional networking tone
+
+
+NEVER STORED — your actual content:
+───────────────────────────────────
+
+✗ "Hi John, I wanted to follow up..." (actual email text)
+✗ "Can you review my PR?" (actual Slack message)
+✗ john@company.com (actual recipient)
+✗ "Meeting notes from yesterday..." (actual content)
+✗ Full documents or files
+✗ Conversation threads
+```
+
+### Privacy Protection Mechanisms
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   HOW WE PROTECT YOUR CONTENT                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. EPHEMERAL PROCESSING                                                    │
+│     └── Content exists in memory only during active typing                  │
+│     └── Cleared immediately after suggestion generated                      │
+│     └── Never written to disk or logs                                       │
+│                                                                             │
+│  2. PATTERN EXTRACTION (not content storage)                                │
+│     └── We extract: "user likes formal greetings"                           │
+│     └── We discard: "Hi John, about the budget meeting..."                  │
+│                                                                             │
+│  3. LOCAL-FIRST                                                             │
+│     └── Personalization data stored only on your device                     │
+│     └── Encrypted with AES-256                                              │
+│     └── Cloud never sees your learned preferences                           │
+│                                                                             │
+│  4. CLOUD CONTENT HANDLING (when rewrite requested)                         │
+│     └── Only send the specific snippet being rewritten                      │
+│     └── Strip names, emails, identifying info                               │
+│     └── Zero retention policy — processed and discarded                     │
+│                                                                             │
+│  5. USER CONTROL                                                            │
+│     └── View what patterns AI has learned about you                         │
+│     └── Delete specific learned patterns                                    │
+│     └── Reset all personalization with one click                            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+SUMMARY:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  We LEARN: "You prefer formal emails with 'Best regards'"                   │
+│  We DON'T KEEP: "Hi John, here's the Q4 budget proposal..."                 │
+│                                                                             │
+│  → Your writing style improves AI suggestions                               │
+│  → Your actual messages stay completely private                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### Sensitive App Detection
 
