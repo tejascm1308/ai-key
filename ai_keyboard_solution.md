@@ -701,6 +701,409 @@ USER'S CONTEXT CACHE (stored locally, updates in background)
 
 ---
 
+## Module 7: Error Handling & Recovery
+
+### The Challenge
+
+AI systems fail. Networks go down. Models hallucinate. The keyboard must handle failures gracefully without disrupting user's work.
+
+### Failure Scenarios & Responses
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        GRACEFUL DEGRADATION STRATEGY                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  SCENARIO 1: Cloud LLM Unavailable                                          │
+│  ─────────────────────────────────                                          │
+│  Detection: API timeout (>3s) or error response                             │
+│  Response:                                                                  │
+│    1. Silently fall back to local model                                     │
+│    2. Cache common requests for offline use                                 │
+│    3. Show subtle indicator "Offline mode"                                  │
+│    4. Retry cloud in background every 30s                                   │
+│                                                                             │
+│  SCENARIO 2: Whisper Transcription Fails                                    │
+│  ─────────────────────────────────────────                                  │
+│  Detection: Empty response or confidence < 30%                              │
+│  Response:                                                                  │
+│    1. If local failed → try cloud                                           │
+│    2. If cloud failed → show "Couldn't hear that"                           │
+│    3. Offer to retry or type instead                                        │
+│                                                                             │
+│  SCENARIO 3: Context Detection Fails                                        │
+│  ───────────────────────────────────                                        │
+│  Detection: Unknown app, no pattern match                                   │
+│  Response:                                                                  │
+│    1. Apply neutral/generic behavior preset                                 │
+│    2. Start learning mode for this app                                      │
+│    3. After 10 interactions, build custom profile                           │
+│                                                                             │
+│  SCENARIO 4: Suggestion Rejected Multiple Times                             │
+│  ───────────────────────────────────────────────                            │
+│  Detection: 3+ consecutive rejections                                       │
+│  Response:                                                                  │
+│    1. Reduce suggestion frequency                                           │
+│    2. Add to "uncertain" pool                                               │
+│    3. Ask user preference silently via behavior tracking                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Recovery Mechanisms
+
+| Failure Type | Auto-Recovery | User Notification |
+|--------------|---------------|-------------------|
+| Network timeout | Retry 3x with backoff | Subtle icon change |
+| LLM error | Fall back to cache/local | None (silent) |
+| Corrupted cache | Rebuild from scratch | "Relearning your preferences" |
+| Extension crash | Auto-restart within 2s | None if quick |
+| Core engine down | Tentacles show "Reconnecting" | Notification after 10s |
+
+### Error Logging
+
+```json
+{
+  "error_log": {
+    "storage": "local_only",
+    "retention_days": 7,
+    "captured": [
+      "error_type",
+      "timestamp",
+      "app_context",
+      "recovery_action"
+    ],
+    "excluded": [
+      "user_text",
+      "suggestions",
+      "personal_data"
+    ]
+  }
+}
+```
+
+---
+
+## Module 8: Onboarding & First-Time User Experience
+
+### Design Philosophy
+
+**Goal:** User gets value in < 2 minutes. No lengthy tutorials.
+
+### Onboarding Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           ONBOARDING STEPS                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  STEP 1: Install & Launch (30 seconds)                                      │
+│  ─────────────────────────────────────                                      │
+│  • One-click install (browser extension / desktop app)                      │
+│  • Automatic startup, no configuration needed                               │
+│  • Background service starts silently                                       │
+│                                                                             │
+│  STEP 2: Quick Setup (60 seconds)                                           │
+│  ────────────────────────────────                                           │
+│  • Simple onboarding modal:                                                 │
+│    ┌─────────────────────────────────────────┐                              │
+│    │  Welcome to AI Keyboard!               │                              │
+│    │                                         │                              │
+│    │  What's your role?                      │                              │
+│    │  [ Developer ] [ Writer ] [ Other ]     │                              │
+│    │                                         │                              │
+│    │  Preferred tone?                        │                              │
+│    │  [ Direct ] [ Friendly ] [ Formal ]     │                              │
+│    │                                         │                              │
+│    │  [Skip - I'll let AI learn naturally]   │                              │
+│    └─────────────────────────────────────────┘                              │
+│                                                                             │
+│  STEP 3: First Interaction (30 seconds)                                     │
+│  ───────────────────────────────────────                                    │
+│  • Guided first suggestion in current app                                   │
+│  • Show: "Press Tab to accept, Esc to dismiss"                              │
+│  • Celebrate first accepted suggestion                                      │
+│                                                                             │
+│  STEP 4: Learn by Using                                                     │
+│  ──────────────────────                                                     │
+│  • Progressive disclosure of features                                       │
+│  • Subtle hints for new features after 1 day, 3 days, 7 days                │
+│  • Never overwhelm with all features at once                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Progressive Feature Discovery
+
+| Day | Features Introduced |
+|-----|---------------------|
+| Day 1 | Basic suggestions, accept/reject |
+| Day 3 | Voice input capability |
+| Day 7 | Custom shortcuts, pause mode |
+| Day 14 | Advanced settings, blocklist |
+
+### Onboarding Metrics
+
+```
+Track silently:
+├── Time to first suggestion accepted
+├── First-week retention rate
+├── Feature discovery percentage
+└── Support/help requests
+```
+
+---
+
+## Module 9: Keyboard Shortcuts
+
+### Core Shortcuts
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         KEYBOARD SHORTCUTS                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  SUGGESTION INTERACTION                                                     │
+│  ───────────────────────                                                    │
+│  Tab          → Accept current suggestion                                   │
+│  Esc          → Dismiss suggestion                                          │
+│  ↓ / ↑        → Navigate between multiple suggestions                       │
+│  Ctrl+→       → Accept word-by-word                                         │
+│                                                                             │
+│  VOICE INPUT                                                                │
+│  ───────────                                                                │
+│  Ctrl+Shift+V → Hold to speak, release to transcribe                        │
+│  Ctrl+Shift+M → Toggle voice mode on/off                                    │
+│                                                                             │
+│  REWRITE & ENHANCE                                                          │
+│  ─────────────────                                                          │
+│  Ctrl+Shift+R → Rewrite selected text                                       │
+│  Ctrl+Shift+E → Enhance/improve selected text                               │
+│  Ctrl+Shift+T → Change tone (cycle: formal/casual/friendly)                 │
+│                                                                             │
+│  CONTROL                                                                    │
+│  ───────                                                                    │
+│  Ctrl+Shift+P → Pause/Resume AI (toggle)                                    │
+│  Ctrl+Shift+O → Open settings                                               │
+│  Ctrl+Shift+? → Show all shortcuts                                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Customizable Shortcuts
+
+```json
+{
+  "shortcuts": {
+    "accept_suggestion": "Tab",
+    "dismiss_suggestion": "Escape",
+    "voice_input": "Ctrl+Shift+V",
+    "rewrite_selection": "Ctrl+Shift+R",
+    "pause_toggle": "Ctrl+Shift+P",
+    "custom": {
+      "insert_signature": "Ctrl+Shift+S",
+      "quick_reply": "Ctrl+Shift+Q"
+    }
+  }
+}
+```
+
+### Context-Aware Shortcuts
+
+| Context | Extra Shortcuts |
+|---------|-----------------|
+| **Email** | Ctrl+Shift+1 = Professional template, Ctrl+Shift+2 = Casual template |
+| **Code** | Ctrl+Shift+D = Generate docstring, Ctrl+Shift+C = Add comments |
+| **Slack** | Ctrl+Shift+G = Insert reaction emoji |
+
+---
+
+## Module 10: Offline Capabilities
+
+### Offline Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         OFFLINE MODE ARCHITECTURE                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHAT WORKS OFFLINE (100%)                                                  │
+│  ─────────────────────────────                                              │
+│  ✓ Context detection (window monitoring is local)                           │
+│  ✓ App switching and behavior adaptation                                    │
+│  ✓ Cached suggestions (user's common phrases)                               │
+│  ✓ Local LLM completions (typos, simple completions)                        │
+│  ✓ Local Whisper transcription (Whisper-Tiny model)                         │
+│  ✓ Personalization (all data stored locally)                                │
+│  ✓ Keyboard shortcuts                                                       │
+│                                                                             │
+│  WHAT REQUIRES NETWORK                                                      │
+│  ───────────────────────                                                    │
+│  ✗ Complex rewrites (needs Cloud LLM)                                       │
+│  ✗ High-quality transcription for noisy audio                               │
+│  ✗ Advanced intent understanding                                            │
+│                                                                             │
+│  GRACEFUL DEGRADATION                                                       │
+│  ────────────────────                                                       │
+│  When network unavailable:                                                  │
+│  • All local features continue working                                      │
+│  • Cloud-dependent features show "Offline" hint                             │
+│  • Requests queued for when connection returns                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Local Model Requirements
+
+| Model | Size | Purpose | RAM Required |
+|-------|------|---------|--------------|
+| Whisper-Tiny | 39 MB | Voice transcription | ~200 MB |
+| TinyLlama (1.1B) | 600 MB | Text completions | ~2 GB |
+| Phi-2 (2.7B) | 1.5 GB | Better completions | ~4 GB |
+
+### Offline-First Sync Strategy
+
+```
+SYNC STRATEGY:
+├── Cache Layer
+│   ├── Pre-cache user's top 100 phrases per context
+│   ├── Store recent suggestions for quick re-use
+│   └── Persist context profiles locally
+│
+├── Background Sync (when online)
+│   ├── Send batched analytics (opt-in)
+│   ├── Download model updates
+│   └── Sync user preferences across devices (opt-in)
+│
+└── Conflict Resolution
+    ├── Local changes always win
+    ├── Cloud is secondary/backup
+    └── User can force cloud restore if needed
+```
+
+### Forced Offline Mode
+
+```
+User can enable "Airplane Mode" for AI Keyboard:
+├── Zero network calls
+├── All processing local
+├── Full privacy guarantee
+└── Reduced capability (no complex rewrites)
+```
+
+---
+
+## Module 11: Plugin & Extension System
+
+### Why Plugins?
+
+Allow users and developers to extend AI Keyboard without modifying core.
+
+### Plugin Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PLUGIN SYSTEM ARCHITECTURE                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│                        ┌─────────────────────┐                              │
+│                        │    CORE ENGINE      │                              │
+│                        │  (Immutable Core)   │                              │
+│                        └─────────────────────┘                              │
+│                                 ↑                                           │
+│                           Plugin API                                        │
+│                                 ↑                                           │
+│   ┌────────────┬────────────┬────────────┬────────────┬────────────┐       │
+│   │  Plugin 1  │  Plugin 2  │  Plugin 3  │  Plugin 4  │  Plugin 5  │       │
+│   │ Email      │ Code       │ Grammar    │ Translate  │ Custom     │       │
+│   │ Templates  │ Snippets   │ Pro        │            │            │       │
+│   └────────────┴────────────┴────────────┴────────────┴────────────┘       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Plugin Types
+
+| Type | Purpose | Example |
+|------|---------|---------|
+| **Context Plugin** | Custom app detection | "Detect Figma and enable design vocab" |
+| **Suggestion Plugin** | Custom suggestion logic | "Insert company-specific templates" |
+| **Command Plugin** | Custom shortcuts/actions | "Quick insert code snippet" |
+| **Integration Plugin** | Connect external services | "Fetch data from Notion" |
+
+### Plugin API
+
+```python
+# Plugin Interface
+class AIKeyboardPlugin:
+    def on_context_change(self, context: Context) -> None:
+        """Called when user switches apps"""
+        pass
+    
+    def on_text_input(self, text: str, context: Context) -> List[Suggestion]:
+        """Return custom suggestions"""
+        pass
+    
+    def on_command(self, command: str, context: Context) -> str:
+        """Handle custom command"""
+        pass
+    
+    def get_shortcuts(self) -> Dict[str, Callable]:
+        """Register custom keyboard shortcuts"""
+        pass
+```
+
+### Example Plugins
+
+```
+EXAMPLE 1: Email Template Plugin
+─────────────────────────────────
+Trigger: User types "##meeting" in email context
+Action: Insert pre-defined meeting follow-up template
+Customizable: User can define their own templates
+
+EXAMPLE 2: Code Snippet Plugin
+──────────────────────────────
+Trigger: User types "!!react-component" in VS Code
+Action: Insert React component boilerplate
+Customizable: User can add snippets for any language
+
+EXAMPLE 3: Translation Plugin
+─────────────────────────────
+Trigger: Ctrl+Shift+L to translate selection
+Action: Translate selected text using LibreTranslate (local) or cloud API
+Customizable: Default language pairs
+```
+
+### Plugin Security
+
+```
+PLUGIN SANDBOXING:
+├── Plugins run in isolated context
+├── No direct file system access
+├── No network access without permission
+├── Limited API surface exposed
+└── User must approve plugin permissions
+
+PERMISSION LEVELS:
+├── Basic: Read context, provide suggestions
+├── Standard: + Custom shortcuts, store data
+├── Extended: + Network access, external integrations
+└── Admin: + System-level access (rare, needs review)
+```
+
+### Plugin Distribution (Post-Hackathon)
+
+```
+PLUGIN MARKETPLACE:
+├── Curated plugins reviewed for security
+├── User ratings and reviews
+├── Auto-updates for installed plugins
+└── Source code visible for open-source plugins
+```
+
+---
+
 ## Standout Strategies Summary
 
 | Module | What Others Do | Our Standout Approach |
