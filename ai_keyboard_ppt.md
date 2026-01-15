@@ -94,7 +94,6 @@ An invisible AI layer that works across all apps — understanding context, lear
   ┌───────────┐       ┌───────────┐       ┌───────────┐
   │  Browser  │       │  Desktop  │       │    IDE    │
   │ Extension │       │    App    │       │ Extension │
-  │ (Chrome)  │       │ (Electron)│       │ (VS Code) │
   └───────────┘       └───────────┘       └───────────┘
 ```
 
@@ -102,7 +101,7 @@ An invisible AI layer that works across all apps — understanding context, lear
 
 ---
 
-## Slide 5: Speed Strategy
+## Slide 5: Speed & Context Switching
 
 ### Three-Layer Speed System
 
@@ -112,146 +111,114 @@ An invisible AI layer that works across all apps — understanding context, lear
 | **Local Model** | 10-100ms | Typo fixes, simple completions |
 | **Cloud LLM** | 100-500ms | Complex rewrites (streamed) |
 
-### Predictive Pre-computation
+**Predictive Pre-computation:** AI pre-computes suggestions before you ask. 70% served instantly.
 
-- AI detects typing patterns and pauses
-- Pre-computes likely suggestions before you ask
-- User types "Dear Mr." → Greeting suggestions already ready
-
-**Result: 70% of suggestions served instantly from cache/local.**
-
----
-
-## Slide 6: Context Switching
-
-### Automatic Adaptation in <50ms
-
-**How It Works:**
-
-1. **Detect** — Monitor active window (OS APIs for desktop, tabs for browser)
-2. **Classify** — Match app to behavior profile (email=formal, Slack=casual)
-3. **Adapt** — Load context-specific suggestions instantly
-
-**Example:**
+### Automatic Context Switching (<50ms)
 
 | App | Detected Context | Suggestion Style |
 |-----|------------------|------------------|
-| Gmail | Email compose, professional recipient | Formal, proper greeting |
+| Gmail | Email compose | Formal, proper greeting |
 | Slack | Team channel | Casual, emoji-friendly |
-| VS Code | Python file | Code completions, technical |
+| VS Code | Python file | Code completions |
 
-**Context profiles pre-loaded for instant switching.**
+**Detect → Classify → Adapt instantly.**
 
 ---
 
-## Slide 7: Voice Integration
+## Slide 6: Voice & Personalization
 
 ### Whisper with Smart Routing
 
-**The Process:**
-
 | Step | Action |
 |------|--------|
-| 1. Audio Analysis | Assess quality, duration, noise level |
-| 2. Route Decision | Clear audio → Local (50ms), Noisy → Cloud (500ms) |
-| 3. Transcription | Convert speech to text |
-| 4. Intent Enhancement | "email john about deadline" → Formatted email |
+| Audio Analysis | Assess quality, duration, noise |
+| Route Decision | Clear → Local (50ms), Noisy → Cloud |
+| Intent Enhancement | "email john" → Formatted email |
 
-**Voice captures ideas. AI delivers polished, contextual output.**
-
----
-
-## Slide 8: Personalization
+**Voice captures ideas. AI delivers polished output.**
 
 ### Learn Without Configuration
 
-**Three-Layer Learning:**
-
 | Layer | How It Works |
 |-------|--------------|
-| **Explicit** | User sets role, tone once during setup |
-| **Observed** | AI learns common phrases, app-specific behavior |
-| **Feedback** | Tracks accept/reject, learns from your edits |
+| **Explicit** | User sets role, tone once |
+| **Observed** | AI learns phrases, app-specific behavior |
+| **Feedback** | Tracks accept/reject, learns from edits |
 
-**What AI Learns (stored locally, encrypted):**
-- Greeting style: "Hi [Name]" vs "Dear Sir"
-- Tone per app: Formal in Gmail, Casual in Slack
-- Common phrases: "sounds good", "LGTM"
-- Anti-patterns: Things you never use
+**What AI Learns (stored locally):** Greeting style, tone per app, common phrases, anti-patterns.
 
-**After one week: Suggestions match your writing style.**
+**After one week: Suggestions match your style.**
 
 ---
 
-## Slide 9: Privacy & Security
+## Slide 7: Privacy & Security
 
 ### USE but Don't STORE
 
 | What We Do | What We Don't Do |
 |------------|------------------|
 | Read content temporarily | Store actual emails/chats |
-| Learn patterns (formal greeting style) | Log your message content |
-| Generate suggestions | Send data to cloud without consent |
+| Learn patterns (greeting style) | Log your message content |
+| Generate suggestions | Send data without consent |
 | Store preferences locally | Train models on your data |
 
-**Protection Mechanisms:**
+### Protection Mechanisms
 
 | Protection | Implementation |
 |------------|----------------|
-| Local-First | All processing on your device |
-| Encryption | AES-256 for stored preferences |
-| Blocklist | Auto-disable in banking, passwords |
-| User Control | Pause anytime, one-click data wipe |
+| **Local-First** | All processing on your device |
+| **Encryption** | AES-256 for stored preferences |
+| **Blocklist** | Auto-disable in banking, passwords |
+| **User Control** | Pause anytime, one-click data wipe |
 
 **Your writing style improves AI. Your actual messages stay private.**
 
 ---
 
-## Slide 10: Plugin System
+## Slide 8: Plugin System & Extensibility
 
-### Extensibility Architecture
-
-**Built as a plugin for Frai ecosystem:**
+### Built as Plugin for Frai Ecosystem
 
 | Aspect | Implementation |
 |--------|----------------|
 | **Core MCP Server** | Exposes standard MCP tools |
-| **Plugin API** | Third-party extensions can add custom tools |
+| **Plugin API** | Extensions can add custom tools |
 | **Sandboxed** | Plugins run isolated, limited permissions |
 
-**Example Plugins:**
-- Email Templates: Custom templates per context
-- Code Snippets: Quick insert boilerplates
-- Translation: Translate selected text
+**Example Plugins:** Email templates, Code snippets, Translation
+
+### Keyboard Shortcuts
+
+| Action | Shortcut |
+|--------|----------|
+| Accept suggestion | Tab |
+| Dismiss | Esc |
+| Voice input | Ctrl+Shift+V |
+| Pause AI | Ctrl+Shift+P |
 
 ---
 
-## Slide 11: Hackathon Scope
+## Slide 9: Hackathon Scope & Team
 
 ### MVP Deliverables
 
 | Component | Description |
 |-----------|-------------|
-| Core MCP Server | Context detection, suggestion generation |
-| Chrome Extension | Works on Gmail, Slack, LinkedIn, etc. |
-| Whisper Integration | Voice input with smart routing |
-| Speed System | Cache + Local model + Cloud fallback |
+| Core MCP Server | Context detection, suggestions |
+| Chrome Extension | Gmail, Slack, LinkedIn, etc. |
+| Whisper Integration | Voice with smart routing |
+| Speed System | Cache + Local + Cloud |
 | Personalization | Pattern learning, per-app behavior |
-| Privacy Controls | Blocklist, pause mode, offline mode |
+| Privacy Controls | Blocklist, pause, offline mode |
 
 ### Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| Core Engine | Python + FastAPI |
+| Core | Python + FastAPI, MCP SDK |
 | LLM | Local (TinyLlama) + Cloud (GPT-4) |
 | Voice | Whisper (local + API) |
 | Extension | JavaScript, Chrome APIs |
-| Communication | WebSocket |
-
----
-
-## Slide 12: Team & Vision
 
 ### Team
 
@@ -259,16 +226,12 @@ An invisible AI layer that works across all apps — understanding context, lear
 |--------|------|
 | [Name] | [Role] |
 
-### Our Vision
-
 > **"Making every keystroke intelligent."**
-
-**AI Keyboard transforms the keyboard from passive input device to intelligent work partner — understanding what you're doing, adapting to your style, and assisting invisibly.**
 
 ---
 
 ## Design Notes
 
-**Theme:** Dark mode with blue/purple accents
-**Font:** Inter or Roboto
-**Slides with diagrams:** 4 (Architecture), 5 (Speed), 6 (Context)
+**Theme:** Dark mode with blue/purple accents  
+**Font:** Inter or Roboto  
+**Flowchart slide:** 4 (Architecture only)
