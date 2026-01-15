@@ -230,7 +230,38 @@ AUDIO INPUT
 
 ---
 
-## Slide 9: Summary & Scope
+## Slide 9: Security & Privacy
+
+### Privacy-First Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                 DATA STAYS LOCAL                        │
+│                                                         │
+│  ✓ All user data stored on device only                 │
+│  ✓ Context cache never leaves machine                  │
+│  ✓ Personalization profiles stored locally             │
+│  ✓ No keystroke logging to external servers            │
+└─────────────────────────────────────────────────────────┘
+```
+
+### What Goes to Cloud (When needed)
+
+| Data Sent | Purpose | Protection |
+|-----------|---------|------------|
+| Text snippet for rewrite | LLM processing | Encrypted, not stored |
+| Audio for transcription | Whisper API | Deleted after processing |
+
+### User Controls
+
+- **Pause Mode** — Disable AI anytime with hotkey
+- **Sensitive App Blocklist** — Never activate in banking, passwords
+- **Data Wipe** — One-click delete all local data
+- **Offline Mode** — Full functionality without cloud
+
+---
+
+## Slide 10: Summary & Scope
 
 ### What AI Keyboard Delivers
 

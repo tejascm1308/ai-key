@@ -525,6 +525,107 @@ Core engine doesn't care which tentacle sent it — processes uniformly.
 
 ---
 
+## Module 6: Security & Privacy
+
+### The Challenge
+
+An AI keyboard captures **everything** the user types — this is sensitive data that includes:
+- Passwords and credentials
+- Personal messages
+- Financial information
+- Confidential work documents
+
+**Trust is essential. Privacy must be built into the architecture.**
+
+### Privacy-First Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PRIVACY-FIRST DESIGN                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  PRINCIPLE 1: LOCAL-FIRST PROCESSING                                       │
+│  • Core engine runs entirely on user's device                               │
+│  • Context cache stored locally only                                        │
+│  • Personalization data never leaves machine                                │
+│                                                                             │
+│  PRINCIPLE 2: MINIMAL CLOUD EXPOSURE                                        │
+│  • Cloud used only when local can't handle                                  │
+│  • Only necessary text sent, never full context                             │
+│  • No persistent storage on cloud                                           │
+│  • Encrypted transmission (TLS 1.3)                                         │
+│                                                                             │
+│  PRINCIPLE 3: USER CONTROL                                                  │
+│  • User decides what goes to cloud                                          │
+│  • One-click data deletion                                                  │
+│  • Pause/disable anytime                                                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Classification
+
+| Category | Examples | Handling |
+|----------|----------|----------|
+| 🔴 **Never Captured** | Password fields, credit cards, OTP | Automatic exclusion |
+| 🟡 **Local Only** | User profile, typing patterns, context cache | Never sent to cloud |
+| 🟢 **Cloud Eligible** | Text for rewriting, audio for transcription | With user consent only |
+
+### Sensitive App Detection
+
+```
+AUTOMATIC BLOCKLIST:
+├── Banking Apps (Chase, PayPal, etc.) → AI disabled
+├── Password Managers (1Password, LastPass) → AI disabled
+├── Login Pages (*/login*, */signin/*) → AI disabled for password fields
+└── User-Defined Apps/Websites → AI disabled
+```
+
+### Encryption & Data Protection
+
+| Aspect | Implementation |
+|--------|----------------|
+| **Data at Rest** | AES-256 encrypted local database |
+| **Data in Transit** | TLS 1.3 for all connections |
+| **Cloud Processing** | Stateless, immediate deletion, zero retention |
+| **Key Storage** | Device-specific, never leaves machine |
+
+### User Privacy Controls
+
+| Control | Function |
+|---------|----------|
+| **Pause Mode** | Global hotkey to instantly disable AI |
+| **Offline Mode** | Force local-only, no network calls |
+| **App Blocklist** | Add apps/websites where AI never activates |
+| **Data Wipe** | One-click delete all local data |
+| **Export Data** | GDPR-compliant data export |
+
+### Privacy Settings Structure
+
+```json
+{
+  "privacy": {
+    "mode": "balanced",
+    "offline_only": false,
+    "cloud": {
+      "allow_llm": true,
+      "allow_whisper": true,
+      "allow_analytics": false
+    },
+    "blocklist": {
+      "apps": ["1Password", "LastPass", "Chase"],
+      "urls": ["*bank*", "*paypal*", "*/login*"]
+    },
+    "data_retention": {
+      "context_cache_days": 7,
+      "auto_delete_on_exit": false
+    }
+  }
+}
+```
+
+---
+
 ## Seamless App Switching — The Complete Flow
 
 ### Detection to Adaptation in <50ms
