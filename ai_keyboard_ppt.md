@@ -47,43 +47,42 @@ Team: [Your Team Name] | Hackathon: Final Round AI
 
 ---
 
-## Slide 3: Our Solution — The Big Picture
+## Slide 3: Our Unique Approach
 
-### One Intelligence Layer, Universal Access
+### What Makes Our Solution Different
+
+**We're not just building "AI + Keyboard". We built 5 standout strategies:**
+
+| Strategy | Our Approach | Others Would Do |
+|----------|--------------|-----------------|
+| **Context Mesh** | Tools share unified state, auto-trigger each other | Isolated tool calls |
+| **Confidence Routing** | Analyze audio before choosing Whisper model | Always call same API |
+| **Predictive Pre-compute** | Compute suggestions BEFORE user needs them | Wait for user input |
+| **Tentacle Architecture** | One brain + multiple thin clients | Rebuild per platform |
+| **Behavioral Fingerprint** | Learn from accept/reject, build anti-patterns | Basic user settings |
+
+### The Core Innovation
 
 ```
-                    ┌───────────────────────────┐
-                    │    🧠 AI KEYBOARD LAYER   │
-                    │                           │
-                    │  • Detects app context    │
-                    │  • Understands intent     │
-                    │  • Adapts behavior        │
-                    │  • Learns user style      │
-                    └───────────────────────────┘
-                              ↕
-      ┌─────────┬─────────┬─────────┬─────────┬─────────┐
-      │  Email  │  Code   │  Chat   │  Docs   │ Terminal│
-      └─────────┴─────────┴─────────┴─────────┴─────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     CONTEXT MESH                            │
+│  (Not just tools, but tools that COLLABORATE)               │
+│                                                             │
+│   detect_context ←→ complete_intent ←→ enhance_text         │
+│         ↓                ↓                  ↓               │
+│         └────────── SHARED STATE ──────────┘                │
+│                                                             │
+│   When one tool learns something, ALL tools know it.        │
+└─────────────────────────────────────────────────────────────┘
 ```
-
-### Key Differentiators
-
-| Feature | How It Works |
-|---------|--------------|
-| **Context Mesh** | All apps share unified context pool |
-| **Instant (<100ms)** | Local-first + caching + prediction |
-| **Universal** | One brain, multiple lightweight interfaces |
-| **Silent Learning** | Observes patterns, adapts automatically |
 
 ---
 
 ## Slide 4: Context-Aware Switching
 
-### How It Adapts When User Switches Apps
+### Seamless App Switching in <50ms
 
-**Detection:** Window monitor captures active app in <50ms
-
-**Example Flow:**
+**How it works practically:**
 ```
 ┌────────────────────────────────────────────────────────────┐
 │ VS Code → User types "def calc_"                           │
@@ -104,45 +103,40 @@ Team: [Your Team Name] | Hackathon: Final Round AI
 └────────────────────────────────────────────────────────────┘
 ```
 
-**Pre-loaded profiles = Zero latency on switch. User notices nothing.**
+**Why it's instant:** Pre-loaded context cache per app. No API call on switch.
 
 ---
 
-## Slide 5: Architecture
-
-### One Brain, Many Tentacles
+## Slide 5: Architecture — One Brain, Many Tentacles
 
 ```
 ┌────────────────────────────────────────────────────────────┐
 │                    CORE AI ENGINE                          │
 │              (Local background service)                    │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  MCP SERVER                                          │  │
-│  │  • transcribe_voice → Whisper                        │  │
-│  │  • enhance_text → Context-aware rewriting            │  │
-│  │  • complete_intent → Predict user needs              │  │
-│  │  • detect_context → App identification               │  │
-│  │                                                      │  │
-│  │  CONTEXT MESH: Tools share unified state             │  │
+│  │  MCP SERVER + CONTEXT MESH                           │  │
+│  │  • Tools auto-chain: voice → context → enhance       │  │
+│  │  • Shared state pool across all operations           │  │
+│  │  • Priority queue: fast local, slow cloud async      │  │
 │  └──────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────┘
-                          ↑ WebSocket
+                          ↑ WebSocket (streaming)
           ┌───────────────┼───────────────┐
           ↓               ↓               ↓
     ┌──────────┐    ┌──────────┐    ┌──────────┐
     │ Browser  │    │ Desktop  │    │   IDE    │
     │Extension │    │   App    │    │Extension │
-    │ (50KB)   │    │(Electron)│    │(VS Code) │
     └──────────┘    └──────────┘    └──────────┘
+    
+    THIN CLIENTS: Only capture + display
+    ALL INTELLIGENCE: Lives in Core
 ```
 
-**Why:** Thin clients capture input → Core engine provides intelligence → Easy to add platforms
+**Add new platform = add new tentacle (1-2 days work)**
 
 ---
 
-## Slide 6: Speed Strategy
-
-### How We Achieve <100ms Response
+## Slide 6: Speed Strategy — Three Layers + Prediction
 
 ```
 USER TYPING
@@ -150,101 +144,93 @@ USER TYPING
 ┌─────────────────────────────────────────────────────────┐
 │ LAYER 1: CACHE (0-10ms)                                 │
 │ • User's common phrases, recent suggestions             │
-│ • Example: "Best regards" → served in 5ms               │
 ├─────────────────────────────────────────────────────────┤
 │ LAYER 2: LOCAL MODEL (10-100ms)                         │
-│ • Small model on device, no network                     │
-│ • Example: Typo fix, simple completion                  │
+│ • Small model on device, zero network latency           │
 ├─────────────────────────────────────────────────────────┤
 │ LAYER 3: CLOUD LLM (100-500ms, streamed)                │
-│ • Complex rewrites, deep understanding                  │
-│ • Response streams token-by-token                       │
+│ • Complex tasks, response streams token-by-token        │
 └─────────────────────────────────────────────────────────┘
+
+PREDICTIVE PRE-COMPUTATION:
+User types "Dear Mr." → AI already computing greetings, templates
+By time user types next char → suggestions READY
 ```
 
-**Bonus: Predictive Pre-computation**
-- User types "Dear Mr." → AI already computing greetings, templates
-- Suggestions ready before user needs them
-
-**Result:** 70% served from cache/local = feels native
+**70% served from cache/local = feels like native OS feature**
 
 ---
 
-## Slide 7: Voice + Text Hybrid
-
-### Smart Whisper Integration
-
-**Problem:** Whisper only transcribes. We add intelligence.
+## Slide 7: Smart Voice — Beyond Transcription
 
 ```
 AUDIO INPUT
      ↓
 ┌─────────────────────────────────────────────────────────┐
-│ AUDIO ANALYZER (<50ms)                                  │
-│ • Noise level, clarity score, duration                  │
-├─────────────────────────────────────────────────────────┤
-│ SMART ROUTING                                           │
-│ • Clear + Short → Local Whisper (50ms)                  │
-│ • Noisy/Long → Cloud Whisper (500ms)                    │
+│ CONFIDENCE-BASED ROUTING (our standout)                 │
+│ ───────────────────────────────────────                 │
+│ Analyze audio FIRST (50ms):                             │
+│ • Clear + Short → Local Whisper-Tiny (50ms)             │
+│ • Clear + Long → Local Whisper-Base (200ms)             │
+│ • Noisy → Cloud Whisper API (500ms)                     │
 ├─────────────────────────────────────────────────────────┤
 │ INTENT ENHANCEMENT                                      │
+│ ─────────────────                                       │
 │ Raw: "email john about friday deadline"                 │
-│ Output: Formatted email with proper greeting/signoff    │
+│                    ↓                                    │
+│ Structured: {action: email, to: john, topic: deadline}  │
+│                    ↓                                    │
+│ Output: Full formatted email ready to send              │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Speak ideas → Get polished, contextual output**
+**Others transcribe. We understand intent.**
 
 ---
 
-## Slide 8: Personalization
-
-### Silent Learning — No Configuration Needed
+## Slide 8: Personalization — Behavioral Fingerprint
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ LAYER 1: EXPLICIT (User sets once)                      │
-│ • Role, preferred tone, language                        │
+│ LAYER 1: EXPLICIT                                       │
+│ • Role, language, basic preferences (set once)          │
 ├─────────────────────────────────────────────────────────┤
-│ LAYER 2: OBSERVED (System learns)                       │
-│ • Common phrases, typing speed, emoji usage             │
-│ • Different behavior per app (formal email, casual chat)│
+│ LAYER 2: OBSERVED (silent learning)                     │
+│ • Typing patterns, common phrases, emoji usage          │
+│ • Different profile per context (email vs slack)        │
 ├─────────────────────────────────────────────────────────┤
-│ LAYER 3: FEEDBACK (Continuous)                          │
-│ • Tracks accept/reject, learns from edits               │
-│ • User changes "utilize" → "use" → never suggest again  │
+│ LAYER 3: FEEDBACK LOOP                                  │
+│ • Track accept/reject ratio per suggestion type         │
+│ • Build ANTI-PATTERNS: things to never suggest          │
+│ • User edits "utilize" → "use" → learns permanently     │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**After one week, AI writes like the user.**
+**One week usage = AI writes like the user. Zero configuration.**
 
 ---
 
-## Slide 9: Summary & Hackathon Scope
+## Slide 9: Summary & MVP
 
-### Why AI Keyboard Wins
+### Our Standout Strategies
 
-| Aspect | Others | Ours |
-|--------|--------|------|
-| Scope | Single app | **Universal** |
-| Access | User goes to AI | **AI comes to user** |
-| Setup | Configure everything | **Learns silently** |
-| Speed | Wait for API | **Predicts ahead** |
-| Input | Text only | **Voice + Text** |
+| Module | Our Approach |
+|--------|--------------|
+| **MCP** | Context Mesh — tools collaborate, not isolated |
+| **Voice** | Confidence routing — smart model selection |
+| **Speed** | Predictive pre-compute — suggestions ready before needed |
+| **Platform** | Tentacle architecture — one brain, many interfaces |
+| **Personalization** | Behavioral fingerprint — learns from behavior |
 
-### MVP Deliverables
+### Hackathon MVP
 
-✅ Core MCP Server with context engine  
-✅ Chrome browser extension  
-✅ Whisper voice input  
-✅ Real-time suggestions  
-✅ Basic personalization  
+✅ Core MCP Server with Context Mesh  
+✅ Chrome extension (first tentacle)  
+✅ Smart Whisper integration  
+✅ Real-time streaming suggestions  
+✅ Basic personalization (Layer 1 + 2)  
 
 ### Team [YOUR NAME]
-
-| Member | Role |
-|--------|------|
-| [Name] | [Role] |
 
 > **"Making every keystroke intelligent."**
 
@@ -254,7 +240,4 @@ AUDIO INPUT
 
 **Theme:** Dark + Electric blue/purple  
 **Font:** Inter or Roboto  
-**Images to search:**
-- Slide 1: "AI keyboard neural network"
-- Slide 2: "context switching productivity"
-- Slide 5: "microservices architecture"
+**Images:** "AI keyboard neural" / "context switching" / "microservices"
