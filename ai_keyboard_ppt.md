@@ -62,16 +62,18 @@
                               ↑
                      WebSocket Protocol
                               ↑
-          ┌───────────────────┼───────────────────┐
-          ↓                   ↓                   ↓
-    ┌───────────┐       ┌───────────┐       ┌───────────┐
-    │  Browser  │       │  Desktop  │       │    IDE    │
-    │ Extension │       │Application│       │ Extension │
-    └───────────┘       └───────────┘       └───────────┘
-                     (Lightweight Clients)
+              ┌───────────────┴───────────────┐
+              ↓                               ↓
+       ┌─────────────┐                 ┌─────────────┐
+       │   Browser   │                 │   Desktop   │
+       │  Extension  │                 │     App     │
+       │             │                 │             │
+       │  All web    │                 │ All native  │
+       │  apps       │                 │ apps + IDEs │
+       └─────────────┘                 └─────────────┘
 ```
 
-**Architecture Pattern:** Centralized intelligence with distributed lightweight clients.
+**Architecture Pattern:** Centralized intelligence with two universal clients.
 
 ---
 
@@ -116,8 +118,8 @@
 
 **Detection Sources:**
 - URL patterns (browser)
-- Window title (desktop)
-- Input field attributes (DOM)
+- Window title and process name (desktop)
+- Input field attributes
 
 **Behavior Mapping:**
 
@@ -125,7 +127,7 @@
 |---------|-------------------|-------------|
 | Gmail Compose | Formal | Professional suggestions |
 | Slack Message | Casual | Brief, emoji-friendly |
-| VS Code Editor | Technical | Code-aware completions |
+| VS Code / IDEs | Technical | Code-aware completions |
 
 **Switching Latency:** <50ms
 
@@ -143,7 +145,6 @@ Audio Input
 ┌─────────────────────────────────────────────────────────────┐
 │  AUDIO ANALYSIS                                             │
 │  • Quality assessment                                       │
-│  • Duration measurement                                     │
 │  • Route decision (local vs cloud)                          │
 └─────────────────────────────────────────────────────────────┘
      ↓
@@ -171,13 +172,12 @@ Audio Input
 
 1. **Explicit Layer** — User-provided preferences (role, tone, language)
 2. **Observed Layer** — Pattern extraction from usage (greeting styles, common phrases)
-3. **Feedback Layer** — Accept/reject signal processing (anti-patterns, preferences)
+3. **Feedback Layer** — Accept/reject signal processing
 
 **Stored Data:**
 - Greeting patterns per application
 - Frequently used phrases
 - Suggestion acceptance patterns
-- User-specific anti-patterns
 
 **Privacy Constraint:** Patterns stored, content discarded.
 
@@ -230,8 +230,6 @@ Audio Input
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Benefit:** Single implementation, multiple integrations.
-
 ---
 
 # Slide 10: Technology Stack
@@ -245,8 +243,8 @@ Audio Input
 | Cloud LLM | OpenAI GPT-4 API |
 | Voice Processing | Whisper (local + API) |
 | Browser Extension | JavaScript, Chrome Extension APIs |
+| Desktop App | Python with OS-level keyboard hooks |
 | Communication | WebSocket |
-| Storage | SQLite with AES-256 encryption |
 
 ---
 
@@ -260,11 +258,10 @@ Audio Input
 - Three-layer speed system
 - Context detection module
 - Personalization engine
-- Privacy controls
 
 **Roadmap:**
-- Phase 1: Desktop application (native apps)
-- Phase 2: IDE extensions
+- Phase 1: Desktop App (all native apps including IDEs)
+- Phase 2: Advanced voice features
 - Phase 3: Enterprise features
 
 ---
@@ -273,7 +270,7 @@ Audio Input
 
 ### Key Differentiators
 
-1. **Universal** — Single solution for all applications
+1. **Universal** — Two clients cover all applications
 2. **Contextual** — Adapts to application automatically
 3. **Fast** — Sub-100ms response time
 4. **Personal** — Learns user patterns silently

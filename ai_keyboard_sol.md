@@ -136,7 +136,6 @@ MCP is the same idea for AI:
 │  │  • complete_intent  → Suggest completions              │  │
 │  │  • transcribe_voice → Convert speech to text           │  │
 │  │  • enhance_text     → Improve your writing             │  │
-│  │  • search_web       → Fetch real-time information      │  │
 │  │                                                        │  │
 │  │  SHARED CONTEXT:                                       │  │
 │  │  All tools see the same context (app, user, history)   │  │
@@ -151,20 +150,19 @@ MCP is the same idea for AI:
                       WebSocket Connection
                       (real-time, fast)
                             ↑
-        ┌───────────────────┼───────────────────┐
-        ↓                   ↓                   ↓
-  ┌───────────┐       ┌───────────┐       ┌───────────┐
-  │  Browser  │       │  Desktop  │       │    IDE    │
-  │ Extension │       │    App    │       │ Extension │
-  │           │       │           │       │           │
-  │ Captures  │       │ Captures  │       │ Captures  │
-  │ web input │       │ any app   │       │ code      │
-  └───────────┘       └───────────┘       └───────────┘
+              ┌─────────────┴─────────────┐
+              ↓                           ↓
+       ┌─────────────┐             ┌─────────────┐
+       │   Browser   │             │   Desktop   │
+       │  Extension  │             │     App     │
+       │             │             │             │
+       │  All web    │             │ All native  │
+       │  apps       │             │ apps + IDEs │
+       └─────────────┘             └─────────────┘
   
-  "TENTACLES" = Thin clients that only:
-  1. Capture what you type
-  2. Send to Core Engine
-  3. Display suggestions
+  TWO CLIENTS cover everything:
+  1. Browser Extension → All websites
+  2. Desktop App → All native apps (Word, Slack, VS Code, etc.)
   
   All intelligence lives in Core Engine
 ```
