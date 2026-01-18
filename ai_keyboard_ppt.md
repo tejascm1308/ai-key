@@ -9,12 +9,11 @@
 
 You use your keyboard 8+ hours daily, yet it understands **nothing** about what you're doing.
 
-| Situation | What Happens |
-|-----------|--------------|
-| Writing a formal email | Keyboard doesn't help with tone |
-| Switching to Slack | No change in behavior |
-| Typing same phrases daily | No shortcuts, no learning |
-| Want to dictate a message | Get raw text, no formatting |
+**Pain Points:**
+- Writing a formal email → Keyboard doesn't help with tone
+- Switching to Slack → No change in behavior
+- Typing same phrases daily → No shortcuts, no learning
+- Want to dictate a message → Get raw text, no formatting
 
 **Current tools are fragmented:**
 - Grammarly → Only grammar, limited apps
@@ -133,12 +132,12 @@ USER TYPES: "Hi, I wanted to"
 
 ### AI That Knows Where You Are
 
-| App | Mode | AI Behavior |
-|-----|------|-------------|
-| **Gmail** (compose) | Formal email | Professional tone, sign-offs |
-| **Slack** (chat) | Casual chat | Friendly, emoji allowed |
-| **VS Code** (coding) | Code completion | Technical, concise |
-| **LinkedIn** (message) | Professional networking | Formal but warm |
+```
+GMAIL (compose)     →  Professional tone, sign-offs, formal
+SLACK (chat)        →  Casual, emoji allowed, brief
+VS CODE (coding)    →  Technical, concise, code-aware
+LINKEDIN (message)  →  Professional networking, warm
+```
 
 **How it works:**
 1. Extension detects URL / window title / input field
@@ -157,11 +156,7 @@ USER TYPES: "Hi, I wanted to"
 ```
 USER SPEAKS: "email john about pushing the deadline to friday"
 
-              ↓ Audio Analysis
-┌─────────────────────────────────────────────────────────────┐
-│  Quality: Clear     Duration: 3s     Route: Local Whisper   │
-└─────────────────────────────────────────────────────────────┘
-              ↓ Transcription
+              ↓ Audio Analysis + Transcription
 ┌─────────────────────────────────────────────────────────────┐
 │  Raw: "email john about pushing the deadline to friday"     │
 └─────────────────────────────────────────────────────────────┘
@@ -187,20 +182,16 @@ USER SPEAKS: "email john about pushing the deadline to friday"
 
 **Three Layers of Learning:**
 
-| Layer | Source | Examples |
-|-------|--------|----------|
-| **Explicit** | You tell us once | Role: Developer, Tone: Direct |
-| **Observed** | We learn automatically | "Hi [Name]" greeting, uses "LGTM" |
-| **Feedback** | Accept/reject actions | Never suggest "utilize" → prefers "use" |
+- **Explicit** — You tell us once (Role: Developer, Tone: Direct)
+- **Observed** — We learn automatically ("Hi [Name]" greeting, uses "LGTM")
+- **Feedback** — Accept/reject actions (Never suggest "utilize" → prefers "use")
 
 **What we learn:**
 - Greeting style per app (formal in Gmail, casual in Slack)
 - Common phrases you type repeatedly
 - Patterns in how you edit suggestions
 
-**Privacy guarantee:**
-- We learn **patterns**, not store **content**
-- All personalization data stays on your device
+**Privacy guarantee:** We learn **patterns**, not store **content**. All data stays on device.
 
 ---
 
@@ -208,20 +199,18 @@ USER SPEAKS: "email john about pushing the deadline to friday"
 
 ### Privacy-First Architecture
 
-| Principle | Implementation |
-|-----------|----------------|
-| **Local-First** | Core engine runs on your device |
-| **USE, Don't STORE** | Read content temporarily, discard after |
-| **User Control** | Pause mode, app blocklist, data wipe |
+**Three Principles:**
+1. **Local-First** — Core engine runs on your device
+2. **USE, Don't STORE** — Read content temporarily, discard after
+3. **User Control** — Pause mode, app blocklist, data wipe
 
-**Data Classification:**
+**Data Handling:**
 
-| Type | Example | Handling |
-|------|---------|----------|
-| 🔴 Never Captured | Passwords, OTP | Auto-excluded |
-| 🟠 Used, Not Stored | Email content | In-memory only |
-| 🟡 Stored Locally | Your preferences | Encrypted on device |
-| 🟢 Cloud (consent) | Text for rewrite | Anonymized, no retention |
+| Type | Handling |
+|------|----------|
+| 🔴 Passwords, OTP | Never captured |
+| 🟠 Email/chat content | Used in memory, then discarded |
+| 🟡 Your preferences | Encrypted on your device |
 
 **Auto-blocked:** Banking apps, password managers, login pages
 
@@ -248,10 +237,7 @@ Model Context Protocol — a standard way for AI tools to communicate.
                     Standard MCP Protocol
                               ↑
 ┌─────────────────────────────────────────────────────────────┐
-│  MCP CLIENTS                                                │
-│  • Frai Platform                                            │
-│  • Claude Desktop                                           │
-│  • Any MCP-compatible app                                   │
+│  MCP CLIENTS: Frai Platform, Claude Desktop, Any MCP app    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -263,16 +249,12 @@ Model Context Protocol — a standard way for AI tools to communicate.
 
 ### What We Used
 
-| Component | Technology |
-|-----------|------------|
-| Core Engine | Python + FastAPI |
-| MCP Server | MCP SDK |
-| Local LLM | Ollama (TinyLlama/Phi-3) |
-| Cloud LLM | OpenAI GPT-4 |
-| Voice | Whisper (local + API) |
-| Browser Extension | JavaScript, Chrome APIs |
-| Communication | WebSocket |
-| Storage | SQLite (encrypted) |
+| Layer | Technology |
+|-------|------------|
+| Backend | Python, FastAPI, MCP SDK |
+| LLM | Ollama (local), OpenAI GPT-4 (cloud) |
+| Voice | Whisper |
+| Extension | JavaScript, Chrome APIs, WebSocket |
 
 ---
 
@@ -287,14 +269,11 @@ Model Context Protocol — a standard way for AI tools to communicate.
 - ✅ Personalization engine
 - ✅ Privacy controls
 
-### Roadmap
+### What's Next
 
-| Phase | Features |
-|-------|----------|
-| **Next** | Desktop app (Word, Outlook, native apps) |
-| **Q2** | VS Code extension, advanced voice |
-| **Q3** | Team profiles, plugin marketplace |
-| **Future** | Multi-language, enterprise features |
+- **Phase 1:** Desktop app (Word, Outlook, native apps)
+- **Phase 2:** VS Code extension, advanced voice
+- **Phase 3:** Team profiles, plugin marketplace
 
 ---
 
