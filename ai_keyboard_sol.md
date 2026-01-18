@@ -29,9 +29,9 @@ You type → AI Layer → Understands intent → Suggests help
 | **Context Mesh** | Our system where all AI tools share information with each other |
 | **Tentacle** | A lightweight client (browser extension, desktop app) that connects to the main AI engine |
 | **LLM** | Large Language Model — AI that understands and generates text (like GPT-4, Claude) |
-| **Whisper** | OpenAI's speech-to-text AI model |
-| **Local Model** | Small AI model that runs on your computer (no internet needed) |
-| **Cloud Model** | Large AI model that runs on servers (needs internet, more powerful) |
+| **Whisper** | OpenAI's speech-to-text AI model (runs locally using faster-whisper) |
+| **Local Model** | AI model that runs on your computer (no internet needed, free) |
+| **Cloud Model** | AI model that runs on servers (needs internet, optional) |
 
 ---
 
