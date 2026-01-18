@@ -143,24 +143,25 @@
 Audio Input
      ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  AUDIO ANALYSIS                                             │
-│  • Quality assessment                                       │
-│  • Route decision (local vs cloud)                          │
+│  LOCAL WHISPER (on device, free)                            │
+│  • faster-whisper library                                   │
+│  • Whisper-small model (244MB)                              │
+│  • Works offline                                            │
 └─────────────────────────────────────────────────────────────┘
      ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  TRANSCRIPTION (Whisper)                                    │
+│  TRANSCRIPTION                                              │
 │  Raw output: "email john about deadline friday"             │
 └─────────────────────────────────────────────────────────────┘
      ↓
 ┌─────────────────────────────────────────────────────────────┐
-│  INTENT ENHANCEMENT                                         │
+│  INTENT ENHANCEMENT (LLM)                                   │
 │  Formatted output:                                          │
 │  "Hi John, Could we extend the deadline to Friday?"         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Routing Logic:** Clear audio → Local Whisper | Noisy audio → Cloud API
+**Key:** Local processing only — free, private, works offline.
 
 ---
 
@@ -240,8 +241,8 @@ Audio Input
 |-----------|------------|
 | Core Server | Python, FastAPI, MCP SDK |
 | Local LLM | Ollama (TinyLlama, Phi-3) |
-| Cloud LLM | OpenAI GPT-4 API |
-| Voice Processing | Whisper (local + API) |
+| Cloud LLM | OpenAI GPT-4 API (optional) |
+| Voice Processing | Local Whisper (faster-whisper) |
 | Browser Extension | JavaScript, Chrome Extension APIs |
 | Desktop App | Python with OS-level keyboard hooks |
 | Communication | WebSocket |
