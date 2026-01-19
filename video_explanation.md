@@ -171,21 +171,25 @@
 
 ---
 
-## SLIDE 9: MCP Integration
+## SLIDE 9: MCP Integration — Plugin for Frai
 
-> "**MCP — Model Context Protocol** — is a standard for AI tools to communicate. Like how USB standardized device connections, MCP standardizes AI communication."
+> "Now, this is important — **AI Keyboard is built as a plugin for the Frai ecosystem.**"
 
-> "We built AI Keyboard as an MCP server exposing four tools:"
+> "Frai uses something called **MCP — Model Context Protocol**. Think of MCP like USB — a standard way for AI tools to connect and communicate with each other."
 
-> "**detect_context** — What app is user in?"
+> "We designed AI Keyboard as an **MCP server** that exposes four tools any Frai client can use:"
 
-> "**complete_intent** — Suggest completions"
+> "**detect_context** — Tells Frai which app the user is currently in"
 
-> "**enhance_text** — Improve text"
+> "**complete_intent** — Provides intelligent text suggestions"
 
-> "**transcribe_voice** — Speech to formatted text"
+> "**enhance_text** — Improves selected text on demand"
 
-> "This plugs directly into the Frai ecosystem and works with any MCP-compatible platform."
+> "**transcribe_voice** — Converts speech to properly formatted text"
+
+> "Because we built it as an MCP plugin, AI Keyboard integrates seamlessly with the Frai platform. Any Frai user can access intelligent keyboard assistance directly through the ecosystem."
+
+> "And the beauty of MCP is extensibility — the same plugin also works with Claude Desktop and any future MCP-compatible platform."
 
 ---
 
