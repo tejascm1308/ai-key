@@ -1,283 +1,359 @@
-# AI Keyboard — Video Conference Presentation Script
+# AI Keyboard — Video Presentation Script
 
-## Recording Format: 4-Person Video Call with Screen Share
+## Recording: Screen Share PPT + Audio Explanation
 
 ---
 
 ## 🎥 Setup
 
-- **Format:** Video conference (Google Meet/Zoom style)
-- **Recording:** Screen share showing PPT + 4 webcam faces
+- **Format:** Screen share PPT slides with voice-over
 - **Duration:** 10-12 minutes
-- **Style:** Conversational, engaging, relatable examples
+- **Speakers:** 4 members taking turns
+- **Style:** Conversational, engaging, easy to understand
 
 ---
 
-# MEMBER 1: Problem & Solution Introduction
+## Slide Order & Speaker Assignment
 
-**Slides:** 1-2 | **Duration:** ~2.5 minutes
-
----
-
-### SLIDE 1: Problem Statement
-
-> "Hi everyone! I'm [Name] and along with my team [Name 2], [Name 3], and [Name 4], we're presenting **AI Keyboard** — making every keystroke intelligent."
-
-> "Let me start with a question. How many of you write emails every day? Messages on Slack? Code in VS Code? We all do, right? We spend hours on our keyboards."
-
-> "But here's something interesting — your keyboard doesn't understand anything about what you're doing. It's completely dumb."
-
-> "Think about it. When you're writing a formal email to your manager, your keyboard doesn't know. When you switch to Slack to chat with friends, your keyboard doesn't adjust. When you type 'Best regards' for the hundredth time this week, your keyboard doesn't learn that you always use this phrase."
-
-> "Now, some tools try to help. Grammarly fixes your grammar, but only works in some apps. GitHub Copilot helps with code, but only in code editors. And ChatGPT? You have to copy your text, paste it in, wait, copy the result back. That completely breaks your flow."
-
-> "The real problem is: **there's no AI that helps you right where you type, across all your apps.** That's the gap we saw."
+| Slide # | Title                    | Speaker  |
+| ------- | ------------------------ | -------- |
+| 1       | Problem Statement        | Member 1 |
+| 2       | Proposed Solution        | Member 1 |
+| 3       | System Architecture      | Member 1 |
+| 4       | Speed Optimization       | Member 2 |
+| 5       | Context Detection        | Member 2 |
+| 6       | Voice Integration        | Member 2 |
+| 7       | Personalization Engine   | Member 3 |
+| 8       | Security Architecture    | Member 3 |
+| 9       | MCP Integration          | Member 3 |
+| 10      | Technology Stack         | Member 4 |
+| 11      | Implementation Status    | Member 4 |
+| 12      | Value Proposition + Demo | Member 4 |
 
 ---
 
-### SLIDE 2: Proposed Solution
+# MEMBER 1: Slides 1, 2, 3
 
-> "So what did we build? **AI Keyboard** — an intelligent layer that sits between your keyboard and your applications."
-
-> "It does four things:"
-
-> "First, **context-aware suggestions**. It knows you're in Gmail, so it suggests professional language. Switch to Slack, and it suggests casual, emoji-friendly text."
-
-> "Second, **voice-to-formatted-text**. You can speak 'email john about deadline friday' and get a properly formatted professional email."
-
-> "Third, **automatic personalization**. It learns your style silently. After a few days, it knows you prefer 'Hi' over 'Dear' and suggests accordingly."
-
-> "Fourth, **universal compatibility**. It works in your browser, in desktop apps, everywhere."
-
-> "Now let me pass to [Member 2] who will explain how we architected this."
+**Duration:** ~3 minutes
 
 ---
 
-# MEMBER 2: Architecture & MCP
+## SLIDE 1: Problem Statement
 
-**Slides:** 3, 9, 10 | **Duration:** ~2.5 minutes
+> "Hello everyone! We are Team [Name] presenting **AI Keyboard — Making Every Keystroke Intelligent**."
+
+> "I'm [Name] and with me are [Name 2], [Name 3], and [Name 4]."
+
+> "Let me start with a simple question. What does your keyboard understand about what you're doing right now? The answer is: nothing."
+
+> "Your keyboard is a passive device. It doesn't know if you're writing a formal email to your boss or a casual message to a friend. It doesn't know if you're in Gmail or Slack or VS Code."
+
+> "And this creates real problems. When you switch from drafting a professional email to chatting with colleagues, your keyboard doesn't help you adjust your tone. When you type the same phrases every day — 'Best regards', 'Sounds good', 'Looking forward to your reply' — you have to type them out every single time."
+
+> "Now, tools like Grammarly help with grammar, but only in some apps. GitHub Copilot helps with code, but only in code editors. ChatGPT requires you to copy-paste text back and forth, which completely breaks your flow."
+
+> "The gap is clear: there's no AI that works right where you type, across all your applications. That's the opportunity we saw."
 
 ---
 
-### SLIDE 3: System Architecture
+## SLIDE 2: Proposed Solution
 
-> "Thanks [Member 1]. I'm [Name] and I'll explain how AI Keyboard works under the hood."
+> "So what is AI Keyboard?"
+
+> "AI Keyboard is an intelligent middleware layer that sits between your keyboard input and the applications you use. It intercepts what you type, understands the context, and provides relevant suggestions."
+
+> "It has four core capabilities:"
+
+> "First, **context-aware suggestions**. It detects which app you're in and adapts. Gmail gets professional suggestions. Slack gets casual, emoji-friendly suggestions."
+
+> "Second, **voice-to-formatted-text**. Speak naturally — 'email john about the deadline' — and get a properly formatted email, not just raw transcription."
+
+> "Third, **automatic personalization**. It learns your writing patterns over time. No configuration needed."
+
+> "Fourth, **universal compatibility**. It works in browsers through our extension and in desktop apps through our desktop client. One solution, all apps covered."
+
+---
+
+## SLIDE 3: System Architecture
+
+> "Now let me explain how this is built."
 
 > "Our architecture follows a simple principle: **one brain, many clients**."
 
-> "The brain is our **Core AI Engine**. It runs locally on your computer. This is where all the intelligence lives — context detection, suggestion generation, personalization."
+> "At the center is our **Core AI Engine**. This runs locally on your computer as a background service. It contains all the intelligence — the MCP server with our tools, the LLM router, the personalization engine, and the cache layer."
 
-> "Now, this brain needs to see what you're typing. That's where our clients come in."
+> "Connected to this brain are two clients:"
 
-> "**Client 1** is a **Browser Extension**. It captures everything you type in Chrome or Firefox — Gmail, Slack, LinkedIn, any website."
+> "The **Browser Extension** captures everything you type in Chrome or Firefox — all websites, all web apps."
 
-> "**Client 2** is a **Desktop App**. It captures typing in native applications — Word, Notepad, VS Code, any app on Windows or Mac."
+> "The **Desktop App** captures typing in native applications — Word, Notepad, VS Code, any Windows or Mac app."
 
-> "Both clients connect to the same brain using WebSocket — that's a real-time communication protocol. So when the AI learns something from your Gmail usage, that knowledge also applies when you're using Microsoft Word."
+> "Both clients communicate with the core engine via WebSocket — that's a real-time protocol that gives us sub-second response times."
 
----
+> "The beauty of this architecture is that all intelligence is centralized. We write the AI logic once, and both clients benefit."
 
-### SLIDE 9: MCP Integration
-
-> "Now, why did we build this using MCP — Model Context Protocol?"
-
-> "Let me explain simply. Before USB, every device had a different cable. Phones, cameras, printers — all different connectors. USB standardized everything."
-
-> "**MCP is like USB for AI tools.** It's a standard protocol for AI systems to communicate."
-
-> "Because we built AI Keyboard as an MCP server, it can plug into the Frai ecosystem — which is part of this hackathon's requirement. It can also work with Claude Desktop or any future MCP-compatible platform."
-
-> "We defined four tools that any MCP client can use: detect context, suggest completions, transcribe voice, and enhance text."
+> "Now I'll hand over to [Member 2] who will explain our speed optimization."
 
 ---
 
-### SLIDE 10: Technology Stack
+# MEMBER 2: Slides 4, 5, 6
 
-> "Quick overview of our tech stack: Python and FastAPI for the core engine, JavaScript for the browser extension, Ollama for running AI locally, and WebSocket for real-time communication."
-
-> "Now [Member 3] will explain how we made this fast and context-aware."
+**Duration:** ~3 minutes
 
 ---
 
-# MEMBER 3: Speed, Context & Features
+## SLIDE 4: Speed Optimization
 
-**Slides:** 4, 5, 6, 7 | **Duration:** ~3 minutes
+> "Thanks [Member 1]. I'm [Name]."
 
----
+> "For a typing assistant, speed is critical. If suggestions take 2-3 seconds to appear, you've already moved on. The suggestion becomes useless."
 
-### SLIDE 4: Speed Optimization
+> "So we designed a **three-layer response system** to achieve sub-100 millisecond response times."
 
-> "Thanks [Member 2]. I'm [Name] and I'll talk about speed — because for a typing assistant, speed is everything."
+> "**Layer 1 is Cache** — response time 0 to 10 milliseconds. This is essentially instant. We pre-store commonly used phrases locally. When you start typing 'Best regards' or 'Sounds good', we retrieve it from cache immediately."
 
-> "If you finish typing and wait 2-3 seconds for a suggestion, you've already moved on. The suggestion becomes useless."
+> "**Layer 2 is Local LLM** — response time 10 to 100 milliseconds. We use Ollama running TinyLlama or Phi-3 on your computer. No network latency. This handles most simple completions."
 
-> "So we built a **three-layer speed system**."
+> "**Layer 3 is Cloud LLM** — response time 100 to 500 milliseconds. For complex requests like full rewrites, we call GPT-4 or Claude. We use streaming responses so text appears progressively."
 
-> "**Layer 1 is Cache** — response time under 10 milliseconds, basically instant. We store your frequently used phrases locally. 'Best regards', 'Sounds good', 'Let me know' — these come up immediately."
-
-> "**Layer 2 is Local AI** — response time 10 to 100 milliseconds. We run a small language model called TinyLlama directly on your computer using Ollama. No internet needed. This handles most completions."
-
-> "**Layer 3 is Cloud AI** — response time 100 to 500 milliseconds. For complex requests like 'rewrite this email professionally', we call GPT-4. Even then, we stream the response so it feels fast."
-
-> "The result? **70% of suggestions come from Layer 1 or 2**, meaning they're nearly instant."
+> "Our performance target is that 70% of requests are served from Layer 1 or 2 — meaning most suggestions are nearly instant."
 
 ---
 
-### SLIDE 5: Context Detection
+## SLIDE 5: Context Detection
 
-> "Now, how does AI Keyboard know what app you're in?"
+> "Now, how does AI Keyboard know what app you're in and adapt its behavior?"
 
-> "For browsers, we read the URL. 'mail.google.com' tells us you're in Gmail. We also analyze the page structure — are you in a compose window? A reply?"
+> "We call this **application-specific adaptation**."
+
+> "The system detects context through multiple sources. For browsers, we analyze URL patterns — 'mail.google.com' tells us Gmail. We also look at input field attributes — is this a compose window or a search box?"
 
 > "For desktop apps, we read the window title and process name."
 
-> "Here's what's cool: when you switch from Gmail to Slack, within 50 milliseconds — faster than you can blink — the AI adjusts its behavior. Gmail gets formal suggestions. Slack gets casual suggestions with emojis."
+> "Based on this detection, behavior changes automatically. Let me give examples:"
 
-> "This happens automatically. You don't configure anything."
+> "When you're in Gmail Compose, we detect formal context and suggest professional language."
 
----
+> "When you're in Slack, we detect casual context and suggest brief, emoji-friendly text."
 
-### SLIDE 6: Voice Integration
+> "When you're in VS Code or any IDE, we detect technical context and provide code-aware completions."
 
-> "We also support voice input. But not just basic transcription."
-
-> "Imagine you're walking and want to draft an email. You speak: 'email john about pushing the meeting to friday'."
-
-> "Normal voice assistants would give you exactly that text. But AI Keyboard understands your **intent**. It produces:"
-
-> "'Hi John, I wanted to check if we could reschedule our meeting to Friday. Let me know if that works. Best regards.'"
-
-> "It understood you wanted an email, detected the casual instruction, and formatted it properly. We use Whisper for transcription — it runs locally, completely free."
+> "The switching latency is under 50 milliseconds. When you Alt+Tab between apps, by the time the window loads, our AI has already adjusted."
 
 ---
 
-### SLIDE 7: Personalization Engine
+## SLIDE 6: Voice Integration
 
-> "Finally, personalization. AI Keyboard learns your style automatically."
+> "We also support voice input — but not just basic transcription."
 
-> "There are three layers of learning. First, **explicit** — during onboarding, you can tell us your role and preferred tone. Second, **observed** — we notice patterns. You always start emails with 'Hi', you use 'LGTM' in code reviews, you prefer formal tone in Gmail but casual in Slack."
+> "Our pipeline works like this: Audio input goes through Whisper — OpenAI's speech-to-text model which we run locally using the faster-whisper library. This gives us raw transcription."
 
-> "Third, **feedback** — when you accept a suggestion, we learn. When you reject one, we learn not to suggest that again."
+> "But we don't stop there. The raw text then goes through **intent enhancement** using our LLM."
 
-> "And importantly — we learn **patterns**, not content. We store 'user prefers Hi greeting', not 'Hi John, about the project...'."
+> "For example, you say: 'email john about deadline friday'"
 
-> "Now [Member 4] will cover privacy and show a demo."
+> "Normal transcription would give you exactly that text. But our system understands the intent and produces:"
 
----
+> "'Hi John, Could we extend the deadline to Friday? Let me know if that works.'"
 
-# MEMBER 4: Privacy, Security & Demo
+> "The key point is this runs locally. It's free, it's private, and it works offline."
 
-**Slides:** 8, 11, 12 + Demo | **Duration:** ~3 minutes
-
----
-
-### SLIDE 8: Security Architecture
-
-> "Thanks [Member 3]. I'm [Name] and I want to address the elephant in the room — privacy."
-
-> "You might be thinking: 'This AI is reading my emails and messages? That sounds concerning.'"
-
-> "Let me explain our core principle: **Use content, don't store content.**"
-
-> "When you type an email, here's what happens. The AI reads your text temporarily — just in memory — to understand context. It extracts patterns like 'this user prefers formal tone in Gmail.' These patterns are stored. But your actual email content? Deleted immediately. Never saved. Never sent to any server."
-
-> "We save: 'User tends to use formal greetings.'"
-
-> "We DON'T save: 'Dear Mr. Smith, regarding our contract negotiation...'"
-
-> "Additionally, banking websites, password managers, and login pages are automatically blocked. AI Keyboard disables itself on sensitive sites."
-
-> "And there's manual control too. Press Ctrl+Shift+P anytime to pause AI Keyboard instantly. One more press to resume."
+> "Now [Member 3] will cover personalization and security."
 
 ---
 
-### SLIDE 11: Implementation Status
+# MEMBER 3: Slides 7, 8, 9
 
-> "What have we actually built for this hackathon?"
-
-> "We completed: the Core MCP Server with all four tools, the Chrome Browser Extension that works on all websites, the three-layer speed system, context detection, and basic personalization."
-
-> "This isn't just a concept. It's a working product."
+**Duration:** ~3 minutes
 
 ---
 
-### SLIDE 12: Value Proposition
+## SLIDE 7: Personalization Engine
 
-> "What makes AI Keyboard special? Let me summarize:"
+> "Thanks [Member 2]. I'm [Name]."
 
-> "**Universal** — Two clients cover all apps, browser and desktop."
+> "AI Keyboard learns your writing style automatically. No configuration dialogs to fill out."
 
-> "**Contextual** — Adapts to each application automatically."
+> "We have a **three-layer learning system**:"
 
-> "**Fast** — Sub-100ms for most suggestions."
+> "**Layer 1 is Explicit** — during onboarding, you can optionally tell us your role — developer, writer, manager — and your preferred tone — direct, friendly, formal."
 
-> "**Personal** — Learns your style without configuration."
+> "**Layer 2 is Observed** — we learn patterns from your usage. We notice that you start emails with 'Hi [Name]' instead of 'Dear Sir'. We notice you use 'sounds good' a lot in Slack. We notice you're more formal in Gmail than in Teams."
 
-> "**Private** — Local-first processing, content never stored."
+> "**Layer 3 is Feedback** — we learn from your accept and reject signals. When you accept a suggestion, that pattern is reinforced. When you reject, we learn not to suggest that again."
 
-> "**Extensible** — MCP-compatible, plugs into Frai ecosystem."
+> "Importantly, we store **patterns**, not content. We remember 'user prefers informal greetings' — we don't store 'Hi John, about the meeting yesterday...'."
 
 ---
 
-### DEMO (Screen Share)
+## SLIDE 8: Security Architecture
 
-> "Let me quickly show you how this looks in action."
+> "This brings me to privacy — which is our top priority."
 
-**[Share screen showing Gmail]**
+> "Our core principle is: **Use content, don't store content.**"
 
-> "I'm in Gmail compose. Watch the bottom of the screen as I type."
+> "When you type an email, here's what happens. We read your text temporarily in memory to understand context. We extract patterns — like 'formal tone detected'. We generate suggestions. Then the actual content is discarded — never saved to disk, never sent to any server."
 
-> "I'll type: 'Hi John, I wanted to follow up on'"
+> "We also have data classification. Sensitive fields like passwords and OTPs are never captured — we detect and exclude them automatically. Email and chat content is ephemeral — used in memory only. Only user preferences are stored persistently, and those are encrypted locally."
+
+> "Banking websites, password managers, and login pages are auto-blocked. AI Keyboard completely disables itself on sensitive sites."
+
+> "And users have manual controls too. Pause mode with Ctrl+Shift+P instantly disables AI Keyboard. There's also a blocklist where you can add specific apps or websites."
+
+---
+
+## SLIDE 9: MCP Integration
+
+> "Now let me explain why we built this as an MCP server."
+
+> "MCP stands for **Model Context Protocol**. It's a standardized way for AI tools to communicate and share context."
+
+> "Think of it like USB. Before USB, every device had a different connector. USB standardized everything. MCP is doing the same for AI tools."
+
+> "We expose four tools through our MCP server:"
+
+> "**detect_context** — returns information about the current application and context."
+
+> "**complete_intent** — returns text suggestions based on input."
+
+> "**enhance_text** — returns improved versions of selected text."
+
+> "**transcribe_voice** — returns formatted text from speech input."
+
+> "Any MCP-compatible client can use these tools. This includes the Frai Platform — which is the hackathon requirement — as well as Claude Desktop and any future MCP-compatible applications."
+
+> "Now [Member 4] will cover our tech stack and show a demo."
+
+---
+
+# MEMBER 4: Slides 10, 11, 12 + Demo
+
+**Duration:** ~3 minutes
+
+---
+
+## SLIDE 10: Technology Stack
+
+> "Thanks [Member 3]. I'm [Name]."
+
+> "Quick overview of our implementation:"
+
+> "The Core Server is built with Python and FastAPI, using the MCP SDK."
+
+> "For Local LLM, we use Ollama with TinyLlama or Phi-3 models."
+
+> "For Cloud LLM, we integrate with OpenAI GPT-4 API — this is optional and only used for complex requests."
+
+> "Voice processing uses local Whisper through the faster-whisper library."
+
+> "The Browser Extension is JavaScript using Chrome Extension APIs."
+
+> "The Desktop App is Python with OS-level keyboard hooks using pynput and pywinauto."
+
+> "Communication between clients and server is via WebSocket."
+
+---
+
+## SLIDE 11: Implementation Status
+
+> "What have we actually completed for this hackathon?"
+
+> "Core MCP Server with all four tools — complete."
+
+> "Chrome Browser Extension — complete."
+
+> "Three-layer speed system with cache, local LLM, and cloud LLM — complete."
+
+> "Context detection module — complete."
+
+> "Personalization engine with observed and feedback layers — complete."
+
+> "For our roadmap, Phase 1 after the hackathon is the full Desktop App for all native applications. Phase 2 is advanced voice features. Phase 3 is enterprise features."
+
+---
+
+## SLIDE 12: Value Proposition
+
+> "Let me summarize what makes AI Keyboard special."
+
+> "**One — Universal.** Two clients cover all applications. Browser extension for web, desktop app for native apps."
+
+> "**Two — Contextual.** Automatically adapts to each application. No manual switching."
+
+> "**Three — Fast.** Sub-100 millisecond response time for most suggestions."
+
+> "**Four — Personal.** Learns your writing style silently over time."
+
+> "**Five — Private.** Local-first processing. Content never stored."
+
+> "**Six — Extensible.** MCP-compatible, so it plugs into the Frai ecosystem and other AI platforms."
+
+---
+
+## DEMO (Screen Share)
+
+> "Now let me quickly show you AI Keyboard in action."
+
+**[Switch screen share to browser with Gmail]**
+
+> "I'm in Gmail, composing a new email. Watch the bottom of the screen."
+
+> "I'll type: 'Hi John, I wanted to follow up on our discussion about'"
 
 **[Tooltip appears with suggestion]**
 
-> "See? A suggestion appeared instantly. I can press Tab to accept or Escape to dismiss."
+> "You can see a suggestion appeared. It detected I'm in Gmail and suggested a professional completion. I can press Tab to accept or Escape to dismiss."
 
-**[Accept suggestion]**
+**[Accept]**
 
-> "The text was inserted right at my cursor. Now let me switch to Slack."
+> "Text inserted. Now let me switch to Slack."
 
 **[Switch to Slack]**
 
-> "Same thing here. I type: 'Hey team, quick'"
+> "I'll type: 'Hey team, quick update'"
 
-**[Suggestion appears with emoji]**
+**[Suggestion appears — more casual with emoji]**
 
-> "Notice the suggestion is more casual and includes an emoji. AI Keyboard detected I'm in a chat app and adjusted automatically."
+> "Notice the suggestion is more casual and includes an emoji. Same AI, but it adapted to the chat context automatically."
 
 > "That's AI Keyboard — making every keystroke intelligent."
 
 ---
 
-### Closing
+## CLOSING
 
-> "Thank you all for listening! To summarize: AI Keyboard puts AI right at the point of input, works everywhere, learns your style, and respects your privacy."
+> "Thank you for watching our presentation. AI Keyboard puts AI assistance right at the point of input, works across all applications, and respects your privacy."
 
-> "We're happy to answer any questions."
+> "We're happy to answer any questions!"
 
 ---
 
-# 📋 Quick Reference for Recording
+# 📋 Summary
 
-### Member Assignments
+| Slide | Title                  | Speaker  | Duration |
+| ----- | ---------------------- | -------- | -------- |
+| 1     | Problem Statement      | Member 1 | 1 min    |
+| 2     | Proposed Solution      | Member 1 | 1 min    |
+| 3     | System Architecture    | Member 1 | 1 min    |
+| 4     | Speed Optimization     | Member 2 | 1 min    |
+| 5     | Context Detection      | Member 2 | 1 min    |
+| 6     | Voice Integration      | Member 2 | 1 min    |
+| 7     | Personalization Engine | Member 3 | 1 min    |
+| 8     | Security Architecture  | Member 3 | 1 min    |
+| 9     | MCP Integration        | Member 3 | 1 min    |
+| 10    | Technology Stack       | Member 4 | 30 sec   |
+| 11    | Implementation Status  | Member 4 | 30 sec   |
+| 12    | Value + Demo           | Member 4 | 2 min    |
 
-| Member | Slides           | Minutes | Key Topic                              |
-| ------ | ---------------- | ------- | -------------------------------------- |
-| 1      | 1-2              | 2.5     | Problem story, solution overview       |
-| 2      | 3, 9, 10         | 2.5     | Architecture, MCP, tech stack          |
-| 3      | 4-7              | 3       | Speed, context, voice, personalization |
-| 4      | 8, 11, 12 + Demo | 3       | Privacy, status, value + live demo     |
+**Total: ~12 minutes**
 
-### Handoff Lines
+---
 
-- Member 1 → 2: "Now let me pass to [Name] who will explain how we architected this."
-- Member 2 → 3: "Now [Name] will explain how we made this fast and context-aware."
-- Member 3 → 4: "Now [Name] will cover privacy and show a demo."
+# 🎬 Recording Tips
 
-### Recording Tips
-
-1. Look at camera when speaking, not at screen
-2. Speak at normal conversational pace
-3. Slight pauses after key points
-4. Demo should be practiced 2-3 times beforehand
-5. Have backup: If demo fails, describe what would happen
+1. Each member records their slides separately
+2. Practice reading the script aloud 2-3 times before recording
+3. Speak at a natural pace — not too fast
+4. Advance slide when you start talking about that slide's content
+5. Demo: Practice 3-4 times to ensure it works smoothly
+6. Have backup plan for demo: If it fails, describe what would happen
