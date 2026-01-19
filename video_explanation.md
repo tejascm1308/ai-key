@@ -147,27 +147,37 @@
 
 > "Thanks [Member 3]. I'm [Name]."
 
-> "AI Keyboard learns your style through three layers:"
+> "Let me explain how AI Keyboard learns your personal writing style."
 
-> "**Explicit** — Optional setup where you tell us your role and tone preference."
+> "We have a three-layer learning system."
 
-> "**Observed** — We notice patterns. 'Uses Hi not Dear. Formal in Gmail, casual in Slack.'"
+> "**Layer 1: Explicit Preferences** — During setup, you can optionally tell us your role — developer, writer, manager — and your preferred tone. This helps us start with good suggestions. But this is completely optional."
 
-> "**Feedback** — Accepted suggestions reinforce patterns. Rejected ones teach us to avoid."
+> "**Layer 2: Observed Patterns** — This is where the real learning happens. As you use AI Keyboard, we observe your patterns. We notice you start emails with 'Hi' instead of 'Dear'. We notice you use 'sounds good' a lot in Slack. We notice you're formal in Gmail but casual in Teams. All automatic."
 
-> "Important: We store **patterns**, not content. We remember 'prefers informal greetings' — not your actual emails."
+> "**Layer 3: Feedback Loop** — Every time you accept a suggestion, that pattern gets reinforced. Every time you dismiss one, we learn to avoid that type of suggestion."
+
+> "An important distinction: We store **patterns**, not content. We remember 'this user prefers Hi over Dear'. We do NOT store 'Hi John, about the project budget...' Your actual emails are never saved."
 
 ---
 
 ## SLIDE 8: Security Architecture
 
-> "Privacy is our priority. Our principle: **Use content, don't store content.**"
+> "This brings me to privacy and security — which is our highest priority."
 
-> "We read text temporarily in memory, extract patterns, generate suggestions, then immediately discard your content. Nothing is saved."
+> "You might wonder: This AI is reading my emails and messages — is my data safe?"
 
-> "Banking sites, password managers, and login pages are auto-blocked."
+> "Our core principle: **Use content, don't store content.**"
 
-> "User controls: Pause with Ctrl+Shift+P. Custom blocklist. One-click data wipe."
+> "Here's exactly what happens: Step 1 — When you type, our AI reads your text temporarily in memory. Step 2 — We extract general patterns like 'user prefers formal tone'. Step 3 — We generate suggestions. Step 4 — Your actual text content is immediately discarded. Never saved. Never sent anywhere."
+
+> "What we store: 'User prefers informal greetings in Slack.'"
+
+> "What we DON'T store: 'Hey John, about the budget meeting tomorrow at 3pm...'"
+
+> "We also have automatic protection. Banking websites, password managers, and login pages are auto-blocked. AI Keyboard completely disables itself on sensitive sites."
+
+> "And you have manual controls: Press Ctrl+Shift+P to instantly pause. Add apps to a blocklist. One-click button to wipe all learned data."
 
 ---
 
