@@ -1734,7 +1734,7 @@ Manages how and when STM gets updated:
 
 - Keystroke events (text changes)
 - Don't update on every single keystroke (too expensive)
-- Wait 300ms after last keystroke, then batch update
+- Wait 300ms after last keystroke, then batch update(this parameter should also be controllable by user)
 
 **Immediate updates**:[^6_1]
 
@@ -1757,6 +1757,7 @@ Manages how and when STM gets updated:
 - ✅ Stored only in RAM (with encrypted disk backup during session)
 - ❌ Never sent to database
 - ❌ Deleted completely when session ends (app close, 30 min inactivity, user logout)
+
 
 ***
 
@@ -1798,6 +1799,7 @@ Stores stable identity and preferences:[^6_4]
 - Slack: Casual, short
 - VS Code: Technical, precise
 - Word: Professional, structured
+- and many other general apps
 
 **Why per-app**: You write differently in different contexts. Casual in chat, formal in documents.
 
@@ -2369,24 +2371,116 @@ Understands what application clipboard content came from:
 - **Action**: Boost clipboard relevance, include in context
 
 
-#### 4.6 Semantic Similarity Engine[^6_1]
+#### 4.6 Semantic Similarity Engine
+Purpose: Measures how semantically related clipboard content is to the user's current writing context to determine if it should be included in LLM suggestions.
 
-Measures how related clipboard text is to current writing:
+Multi-Factor Relevance Scoring
+The engine uses 6 weighted factors to calculate clipboard relevance (0.0 = irrelevant, 1.0 = highly relevant):
 
-**Techniques used**:
+Factor 1: Time Decay (Weight: High)
 
-- **TF-IDF vectorization**: Convert text to numerical vectors
-- **Cosine similarity**: Measure angle between vectors (0=unrelated, 1=identical)
-- **Keyword matching**: Count shared important words
-- **Domain detection**: Financial terms, technical terms, casual language
+< 2 minutes: +0.30 (very fresh, actively being used)
 
-**Example calculation**:
+2-10 minutes: +0.15 (recent, likely relevant to workflow)
 
-- Clipboard: "quarterly revenue increased by 15% YoY"
-- Current text: "In conclusion, our financial performance..."
-- Shared terms: "financial", "quarterly" (implied in Q1 report context)
-- Similarity score: 0.72 (fairly related)
+10-30 minutes: 0.00 (neutral)
 
+30-60 minutes: -0.10 (getting stale)
+
+> 60 minutes: -0.25 (old, probably different task)
+
+Factor 2: Source App Relevance (Weight: Medium)
+
+Same app: +0.10 (internal copy-paste)
+
+Related workflow app: +0.20 (e.g., copying from Excel while writing in Word)
+
+Browser → Document editor: +0.15 (research workflow detected)
+
+Factor 3: Semantic Text Similarity (Weight: 25%)
+
+Uses lightweight text similarity algorithms (not heavy embeddings for speed)
+
+Compares clipboard content with current paragraph text
+
+Detects shared domain-specific terms and concepts
+
+Score contributes up to 0.25 to final relevance
+
+Factor 4: Content Pattern Detection (Weight: Medium)
+
+Data patterns (numbers, statistics, percentages): +0.10 (likely being referenced)
+
+URLs: -0.10 (less directly useful for text suggestions)
+
+Code snippets: Contextual based on current app
+
+Factor 5: Type Penalty (Weight: Low)
+
+Text: 0.00 (neutral, always potentially useful)
+
+Images: -0.15 (less useful for text completion)
+
+Files: -0.20 (metadata only, low relevance)
+
+Factor 6: Already Used Check (Weight: Medium)
+
+If clipboard content was already pasted recently: -0.20 (redundant, no need to suggest again)
+
+Semantic Similarity Techniques
+Unlike traditional TF-IDF/cosine similarity (too slow for real-time), we use fast approximation methods:
+
+Keyword overlap scoring: Count shared significant words between clipboard and current text
+
+Domain detection: Identify if both texts share domain vocabulary (financial terms, technical jargon, casual language)
+
+N-gram matching: Compare common 2-3 word phrases for contextual similarity
+
+Length normalization: Adjust similarity for text length differences
+
+Performance target: < 10ms calculation time for real-time responsiveness.
+​
+
+Example Calculation
+text
+Clipboard: "quarterly revenue increased by 15% YoY"
+Current text: "In conclusion, our financial performance..."
+
+Analysis:
+├─ Time: Copied 3 minutes ago → +0.15
+├─ Source: Chrome (data viewing) → Word (report writing) → +0.20
+├─ Semantic similarity:
+│  ├─ Shared terms: "financial", "quarterly" (implied in Q1)
+│  ├─ Domain: Both financial/business language
+│  └─ Score: 0.18 (out of 0.25)
+├─ Pattern: Contains data (15%, YoY) → +0.10
+├─ Type: Text → 0.00
+└─ Already used: No → 0.00
+
+Final Relevance Score: 0.63
+Decision: Include clipboard in LLM context (threshold: 0.60)
+Integration with LLM Context
+Based on relevance score:
+
+≥ 0.65: Include full clipboard content in LLM prompt with high priority
+
+0.45-0.64: Include brief mention in context
+
+< 0.45: Exclude from LLM context (not relevant enough)
+
+This intelligent filtering ensures the LLM receives only contextually relevant clipboard data, improving suggestion quality while staying within the 2000-token context budget.
+​
+
+Privacy note: Clipboard content is analyzed in RAM only during active session and never stored to disk or LTM database.
+​
+
+Key Difference from Traditional Approach:
+
+❌ Not using: TF-IDF vectorization + cosine similarity (too slow, ~50-100ms)
+
+✅ Using: Fast multi-factor scoring with lightweight text comparison (~5-10ms)
+
+Result: Real-time performance suitable for keystroke-level responsiveness
 
 #### 4.7 Privacy Filter[^6_1]
 
@@ -2407,6 +2501,9 @@ Protects sensitive clipboard data:
 - SSN/ID patterns
 - Password field indicators
 - Bank account patterns
+
+all logic implemented in code
+
 
 **Action on sensitive data**: Immediate memory clear, not stored even temporarily.
 
@@ -2459,12 +2556,8 @@ Constructs the full prompt sent to the LLM:
 - Output format: "Respond ONLY with valid JSON: {suggestion, type, confidence}"
 - General guidelines: "Match user's style, respect formality, complete thoughts naturally"
 
-**Prompt size management**:
+Prompt size management should be done efficiently
 
-- System prompt: ~200 tokens (fixed)
-- Context: Variable, optimized for task
-- Current text: Last 500 characters before cursor
-- Total: Kept efficient for fast response
 
 
 #### 5.2 Context Transformer[^6_1]
@@ -2501,37 +2594,11 @@ User prefers: professional, concise style
 ```
 
 
-#### 5.3 Context Compression Engine[^6_2]
+#### 5.3 Context Engine[^6_2]
 
-Optimizes context to include maximum relevant information in limited space:
+ context to include maximum relevant information in limited space:
 
-**Compression strategies**:
-
-**Strategy 1: Relevance filtering**:
-
-- Cross-app context: Only include if relevance > 0.6[^6_2]
-- Clipboard: Only include if relevance > 0.7[^6_1]
-- Historical suggestions: Only last 5 most relevant
-
-**Strategy 2: Summarization**:
-
-- Long text before cursor: Use last 500 chars (most relevant)
-- Cross-app context: Brief summary, not full content
-- User vocabulary: Top 10 frequent phrases, not full list
-
-**Strategy 3: Priority allocation**:
-
-- Critical: Current text (always full)
-- High: User style preferences (always included)
-- Medium: Mood and behavioral signals (compressed)
-- Low: Cross-app context (included only if relevant)
-
-**Strategy 4: Task-specific selection**:
-
-- Code completion: Prioritize imports, scope, language[^6_2]
-- Email: Prioritize recipient, thread, tone[^6_1]
-- Document: Prioritize section, formality, structure[^6_1]
-
+llm context should be used effieciently to send to llm.
 
 #### 5.4 Cloud LLM Client[^6_2]
 
@@ -2543,6 +2610,7 @@ Manages connections to cloud AI services:
 - Anthropic (Claude 3.5 Sonnet, Claude 3 Opus)
 - Google (Gemini Pro)
 - Others via API compatibility
+- we use openrouter now (fixed)
 
 **Client responsibilities**:
 
@@ -2616,7 +2684,7 @@ Processes LLM responses as they arrive (token-by-token):
 - Better UX: Suggestion appears to "type out" naturally
 - Cancelable: User can dismiss before full response received
 
-**Streaming process**:
+**Streaming process**(on/off control should be available for this feature):
 
 1. Send request with `stream: true` parameter
 2. Receive tokens as they're generated
@@ -2656,11 +2724,7 @@ Ensures LLM output is usable:
 - **Privacy mode**: Local LLM (no data leaves device)
 - **Cloud failure**: Local LLM (graceful degradation)
 
-**User control**:[^6_2]
-
-- Preference setting: cloud_first / local_first / local_only
-- Max cloud latency threshold (default: 500ms)
-- Auto-fallback toggle (default: enabled)
+- primarily we use cloud llm, backup is offline
 
 ***
 
@@ -2678,8 +2742,9 @@ Validates conditions before making an expensive LLM call:
 
 **Check 1: Sufficient Context?**
 
-- Is there at least 10 characters typed?[^6_4]
-- If less: No point suggesting (not enough context)
+- Is there at least few characters typed?- like we can give suggestions also based on app context or some other constrainsts considering his style and basic starting typing (but at least two or three words and this should also be configurable.)
+- and also the suggestions should be like if typing stuck(or debounce) in the middle of the word, like it should suggest from there continuing from that middle of the word , same goes with the sentence.
+- If less: No point suggesting (not enough context- only intellisense like or n gram model single word suggestion in upper section)
 - Exception: After punctuation (., !, ?), can suggest with less context
 
 **Check 2: In Text Field?**
@@ -2710,8 +2775,8 @@ Validates conditions before making an expensive LLM call:
 **Check 6: Recent Dismissals Threshold?**[^6_2]
 
 - How many suggestions has user dismissed in last 5 minutes?
-- If >5 dismissals: Back off (user clearly doesn't want suggestions now)
-- Increase debounce delay 1.5x[^6_2]
+- If >5 dismissals: 
+- Increase debounce delay 1.5x with better suggestion[^6_2]
 
 **Outcome**:
 
@@ -3107,7 +3172,7 @@ Manages automatic, context-aware suggestions:
 - Small overlay appears near cursor
 - Section 1: 3 word suggestions (instant)[^6_2]
 - Section 2: Sentence completion (after brief delay)[^6_2]
-- User can Tab to accept, Esc to dismiss, or keep typing to ignore
+- User can Tab(or some other non-common alt based shortcut) to accept, Esc(or some other non-common alt based shortcut) to dismiss, or keep typing to ignore
 
 **When NOT to trigger**:
 
@@ -3232,16 +3297,6 @@ Manages the floating icon interaction:
 [^6_5]: GRAMMARLY_TECHNICAL_RESEARCH.md
 
 
----
-
-# AI Keyboard - Complete Module Documentation
-
-## Part 1 (Continued): Core Intelligence \& Dual Suggestion System (Modules 8-10)
-
-
-***
-
-## Module 8: Dual Mode Manager (Continued)
 
 #### 8.4 Icon Click Handler (Continued)
 
@@ -3259,7 +3314,8 @@ Manages the floating icon interaction:
 
 - Selected text (if any)
 - Text before cursor (500 chars)
-- Text after cursor (100 chars)
+- Text after cursor (500 chars)
+- these both the options are controllable
 - Current app and document
 - User's typical style for this app
 
@@ -3389,10 +3445,19 @@ Shows 3 single-word predictions:
 
 **Selection methods**:
 
-- Tab key: Accept first word
+- Tab key: Accept first word 
 - Number keys 1/2/3: Accept specific word
 - Arrow keys + Enter: Navigate and select
 - Keep typing: Ignore suggestions
+- clicking these keys should not come in the text field, or if user wants to use these keys for other purpose?
+| Action                 | Shortcut | Why                            |
+| ---------------------- | -------- | ------------------------------ |
+| Accept full suggestion | Tab      | Grammarly uses this boia​      |
+| Accept word 1          | Alt+1    | No conflict with typing        |
+| Accept word 2          | Alt+2    | No conflict with typing        |
+| Accept word 3          | Alt+3    | No conflict with typing        |
+| Dismiss                | Esc      | Standard cancel key            |
+| Navigate words         | Alt+→/←  | Arrow keys alone = cursor move |
 
 **Smart word selection**:
 
@@ -3587,7 +3652,7 @@ User types → [Immediate: Update Section 1 with n-gram words]
 - `Tab`: Accept entire Section 2 sentence
 - `1`, `2`, `3`: Accept respective Section 1 word
 - `Esc`: Dismiss all suggestions
-- `Ctrl + →`: Accept Section 2 word-by-word[^7_5]
+- `Alt + →/←`: Accept Section 2 word-by-word and navigate[^7_5]
 
 
 #### Mode 2: Mouse Interaction
@@ -3761,7 +3826,7 @@ Manages the transition from static to editable:
 - Swipe gestures to accept/dismiss
 
 
-#### 11.3 Word-by-Word Acceptance (Ctrl+→)[^8_5]
+#### 11.3 Word-by-Word Acceptance (Alt+→)[^8_5]
 
 Allows partial acceptance of suggestions:
 
@@ -3875,7 +3940,7 @@ Provides text field for user instructions:
 │  │ Make this more professional...      │  │
 │  └─────────────────────────────────────┘  │
 │                                           │
-│  [✨ Generate]  [❌ Cancel]                │
+│  [✨ Generate]  [❌ Cancel]              │
 └───────────────────────────────────────────┘
 ```
 
@@ -4421,76 +4486,6 @@ Creates unique fingerprint of each LLM request:
 - Very minor STM fluctuations
 
 
-#### 15.2 Last Request Cache (Single Request Only)[^8_5]
-
-Stores only the most recent request/response pair:
-
-**Cache structure**:
-
-```
-{
-  "request_hash": "a3f7e921d4...",
-  "request_context": {...},
-  "response": {
-    "suggestion": "analysis demonstrates significant growth",
-    "type": "completion",
-    "confidence": 0.87
-  },
-  "timestamp": "2026-01-30T01:05:23Z",
-  "ttl": 10000  // milliseconds
-}
-```
-
-**Cache policy**:
-
-- **Size**: Only 1 request cached (not multiple)
-- **Replacement**: New request overwrites old cache
-- **TTL**: 10 seconds (cache expires after 10s)
-- **Invalidation**: Cleared on significant context change
-
-**Why only 1 request**:
-
-- User context changes rapidly while typing
-- Caching multiple requests would mostly contain stale entries
-- Single recent request is sufficient for common duplicate scenarios
-
-
-#### 15.3 Duplicate Prevention (No Stale Cache)[^8_5]
-
-Detects and prevents redundant API calls:
-
-**Duplicate detection**:
-
-1. New suggestion request comes in
-2. Hash the context
-3. Compare to cached request hash
-4. If hash matches AND cache not expired: Return cached response
-5. If hash different OR cache expired: Make new API call
-
-**Example scenario**:
-
-- User types "In conclusion, our"
-- System triggers LLM request
-- Before LLM responds, user pauses longer
-- Debounce triggers another request with SAME context
-- Hash matches → Return pending/cached response, don't make 2nd API call
-
-**Cache miss scenarios**:
-
-- User types one more character: Context changed, hash different
-- Cache expired (>10s old): Too stale, make fresh request
-- Context significantly changed: Different hash
-
-**Benefits**:
-
-- Saves money: No duplicate API calls
-- Saves time: Instant response from cache
-- Reduces server load: Fewer requests
-
-**Anti-pattern avoided**: Don't cache multiple old requests that would become stale.[^8_5]
-
-***
-
 ## Module 16: Latency Monitor
 
 ### Overview
@@ -4919,13 +4914,12 @@ Pattern-matching grammar rules:
 
 #### 19.3 Error Underline Renderer (Wavy Red/Blue)[^8_5]
 
-Visual error indicators:
+Visual error indicators on overlay:
 
 **Underline types**:
 
 - **Red wavy**: Spelling errors
 - **Blue wavy**: Grammar errors
-- **Green wavy**: Style suggestions (optional)
 
 **Rendering method**:
 
@@ -5646,7 +5640,7 @@ Shows small circular icon near cursor:
 **Icon design**:
 
 - Small circle (24x24 pixels)
-- AI sparkle icon (✨) or custom logo
+- custom logo
 - Subtle shadow for depth
 - Pulsing animation when processing
 
@@ -5671,7 +5665,7 @@ Shows small circular icon near cursor:
 - Right-click: Quick settings menu
 
 
-#### 23.3 Two-Section Suggestion Overlay[^9_5]
+#### 23.3 Two-Section Suggestion tooltip[^9_5]
 
 Main suggestion display:
 
@@ -6022,193 +6016,584 @@ Counts error corrections:
 
 ***
 
-## Module 25: Text Insertion Module
+### Module 25: Text Insertion Module (Final Production Version)
+Overview
+The Text Insertion Module intelligently injects suggested text using a multi-tier fallback system: Native platform APIs first, smart clipboard preservation second, and manual fallback as last resort. This hybrid approach ensures 95%+ success rate while never losing user clipboard data.
+
+Core Architecture
+Insertion Priority Hierarchy
+text
+┌────────────────────────────────────────────┐
+│    Text Insertion Strategy (Hybrid)        │
+├────────────────────────────────────────────┤
+│                                            │
+│  TIER 1: Native Platform APIs (PRIMARY)   │
+│  ├─ Windows: UI Automation TextPattern    │
+│  ├─ macOS: Accessibility API              │
+│  ├─ Linux: AT-SPI                         │
+│  └─ Browser: DOM Manipulation             │
+│  Success Rate: 75-85%                     │
+│  Speed: 5-30ms                            │
+│  Clipboard Safe: ✅ Yes                   │
+│                                            │
+│  TIER 2: Smart Clipboard (FALLBACK)       │
+│  ├─ Detect clipboard contents             │
+│  ├─ Preserve if images/files detected     │
+│  ├─ Save all formats before overwrite     │
+│  └─ Restore completely after insertion    │
+│  Success Rate: 10-15% (when Tier 1 fails) │
+│  Speed: 50-100ms                          │
+│  Clipboard Safe: ✅ Yes (with checks)     │
+│                                            │
+│  TIER 3: Character Simulation (LIMITED)   │
+│  └─ SendKeys for short text (<50 chars)   │
+│  Success Rate: 3-5%                       │
+│  Speed: 500ms-5s (slow)                   │
+│  Clipboard Safe: ✅ Yes                   │
+│                                            │
+│  TIER 4: Manual Fallback (LAST RESORT)    │
+│  └─ Show copy overlay for user action     │
+│  Success Rate: 100% (user controlled)     │
+│  Clipboard Safe: ✅ Yes                   │
+│                                            │
+│  OVERALL SUCCESS: 95%+ automated          │
+└────────────────────────────────────────────┘
+25.1 Native API Inserter (Tier 1 - Primary)
+Platform-Specific Implementation
+Purpose: Direct text insertion via OS-native accessibility APIs. No clipboard involvement.
 
-### Overview
+Windows: UI Automation TextPattern
+Method:
 
-The Text Insertion Module **injects suggested text into applications** when user accepts suggestions. It handles the technical challenge of inserting text across different app architectures.[^9_3][^9_5]
+text
+1. Get focused element via IUIAutomation
+2. Acquire TextPattern or ValuePattern interface
+3. Read current text and cursor position
+4. Insert text at cursor via SetValue() or text range manipulation
+5. Update cursor position to end of inserted text
+6. Trigger input events for app awareness
+Advantages:
 
-### Core Responsibilities
+✅ Zero clipboard interference
 
-#### 25.1 Clipboard Manager (Save/Restore)[^9_3]
+✅ Preserves undo/redo history
+
+✅ Supports rich text formatting
 
-Protects user's clipboard during insertion:
+✅ Respects text selection
 
-**Problem**: Inserting text via paste (Ctrl+V) overwrites clipboard.
+✅ Fast (15-25ms average)
 
-**Solution**:
+Supported Controls:
 
-1. Save current clipboard content
-2. Place suggestion text in clipboard
-3. Simulate Ctrl+V to paste
-4. Restore original clipboard content
+Standard Edit controls (99%)
 
-**Clipboard operations**:
+Rich Edit controls (95%)
 
-```python
-# Save
-original_clipboard = get_clipboard_content()
+.NET TextBox controls (98%)
 
-# Use clipboard for insertion
-set_clipboard(suggestion_text)
-paste_via_ctrl_v()
+WPF text controls (95%)
 
-# Restore
-set_clipboard(original_clipboard)
-```
+Some custom controls (60%)
 
-**Timing**:
+Overall Success Rate: 75% of Windows desktop applications
 
-- Save/restore cycle: <50ms
-- User never notices clipboard was temporarily changed
-- Works across all clipboard formats (text, images, etc.)
+macOS: Accessibility API (AXUIElement)
+Method:
 
-**Edge cases**:
+text
+1. Get focused element via AXUIElementCreateSystemWide()
+2. Read AXValue attribute (current text)
+3. Read AXSelectedTextRange (cursor position)
+4. Calculate new text: before_cursor + inserted_text + after_cursor
+5. Set AXValue with new complete text
+6. Update AXSelectedTextRange to position cursor after insertion
+Advantages:
+
+✅ Native macOS method
+
+✅ No clipboard usage
+
+✅ Works across most apps
+
+✅ Fast (20-35ms average)
 
-- Empty clipboard: Nothing to restore
-- Large clipboard (image): Save pointer, not full data
-- Clipboard access denied: Fallback to different method
+Supported Controls:
 
+NSTextField (99%)
 
-#### 25.2 ValuePattern Setter (UI Automation)[^9_3]
+NSTextView (98%)
 
-Direct text insertion via UI Automation:
+WebKit text fields (95%)
 
-**SetValue method**:
+Custom controls with accessibility (70%)
 
-- UI Automation ValuePattern interface
-- `IValueProvider.SetValue(string value)`
-- Directly sets text in control
-- Faster than clipboard method
-- Doesn't affect clipboard
+Overall Success Rate: 85% of macOS applications
 
-**Supported controls**:
+Linux: AT-SPI (Assistive Technology Service Provider)
+Method:
 
-- Simple text boxes
-- Single-line inputs
-- Some rich text controls
-
-**Limitations**:
-
-- Not all controls support ValuePattern
-- Some apps don't expose this interface
-- Rich formatting lost (plain text only)
-
-**Use case**:
-
-- Preferred method when available (clean, fast)
-- Fall back to clipboard if not supported
-
-
-#### 25.3 Paste Simulator (Ctrl+V)[^9_3]
-
-Simulates keyboard input to paste:
-
-**Simulation method**:
-
-- Send Ctrl key down event
-- Send V key down event
-- Send V key up event
-- Send Ctrl key up event
-- Small delays between events (10-20ms)
-
-**Why simulate**:
-
-- Works in all apps that support paste
-- Most reliable cross-app method
-- Handles rich formatting
-
-**Alternatives tried (if Ctrl+V fails)**:
-
-- Right-click context menu → Paste
-- App-specific paste shortcuts
-- SendKeys API
-
-
-#### 25.4 pywinauto Wrapper Methods[^9_3]
-
-High-level automation library integration:
-
-**pywinauto capabilities**:
-
-- Window control identification
-- Text input simulation
-- Button clicking
-- Menu navigation
-
-**Wrapper usage**:
-
-- Identify target text control
-- Use `.type_keys()` method for text insertion
-- Handle special characters and key combinations
-
-**When to use**:
-
-- Complex applications with custom controls
-- When UI Automation insufficient
-- For testing and automation scenarios
-
-
-#### 25.5 Direct Fix Injector (for Spelling/Grammar)[^9_5]
-
-Replaces specific text ranges:
-
-**Targeted replacement**:
-
-- Identify error position (start, end indices)
-- Select error text programmatically
-- Replace with correction
-- Maintain surrounding text
-
-**Selection-based approach**:
-
-1. Get error word boundaries
-2. Set selection to error range (using UI Automation)
-3. Insert correction (replaces selection)
-4. Move cursor after correction
-
-**Advantages**:
-
-- Surgical precision (only changes error)
-- Preserves formatting
-- Maintains undo history in app
-
-**Example**:
-
-- Original: "The recieve was delivered"
-- Error detected: "recieve" at position 4-11
-- Select range [4:11]
-- Replace with "receipt"
-- Result: "The receipt was delivered"
-
-
-#### 25.6 Insertion Validator[^9_3]
-
-Verifies text was inserted correctly:
-
-**Validation process**:
-
-1. Perform insertion
-2. Wait 50-100ms (app processing time)
-3. Read text from control via UI Automation
-4. Compare with expected result
-5. Confirm success or retry
-
-**Failure detection**:
-
-- Text doesn't contain inserted content
-- Cursor position didn't advance
-- App became unresponsive
-
-**Retry logic**:
-
-- Attempt 1: UI Automation ValuePattern
-- Attempt 2: Clipboard + Paste
-- Attempt 3: SendKeys character-by-character
-- Max retries: 3
-- Final failure: Log error, notify user
-
-***
+text
+1. Connect to AT-SPI registry
+2. Get focused accessible object
+3. Query for EditableText interface
+4. Get current text and caret offset
+5. Insert text at caret position via insertText()
+6. Update caret position
+Advantages:
+
+✅ Standard Linux accessibility API
+
+✅ No clipboard dependency
+
+✅ Works with GTK, Qt applications
+
+Supported Controls:
+
+GTK Entry/TextView (95%)
+
+Qt text widgets (90%)
+
+Firefox/Chrome fields (90%)
+
+Overall Success Rate: 70% of Linux applications
+
+Browser: DOM Manipulation (Extension)
+Method:
+
+text
+For <input>/<textarea>:
+  1. Get selectionStart, selectionEnd
+  2. Compute: newValue = value.slice(0, start) + text + value.slice(end)
+  3. Set element.value = newValue
+  4. Update selectionStart/End to end of inserted text
+  5. Dispatch 'input' and 'change' events
+
+For contentEditable:
+  1. Get window.getSelection()
+  2. Get selection.getRangeAt(0)
+  3. Delete current selection via range.deleteContents()
+  4. Create text node: document.createTextNode(text)
+  5. Insert via range.insertNode(textNode)
+  6. Collapse selection after inserted text
+  7. Dispatch 'input' event
+Advantages:
+
+✅ 99% reliable in browsers
+
+✅ Instant (2-8ms)
+
+✅ No clipboard needed
+
+✅ Handles rich text in contentEditable
+
+Overall Success Rate: 99% of web-based text fields
+
+25.2 Smart Clipboard Inserter (Tier 2 - Fallback)
+Pre-Insertion Safety Analysis
+Purpose: Detect and preserve important user clipboard data before using clipboard for insertion.
+
+Analysis Process:
+
+text
+1. Open clipboard
+2. Enumerate all available formats
+3. Classify content type:
+   ├─ EMPTY: No data
+   ├─ TEXT_SMALL: Text < 100KB
+   ├─ TEXT_LARGE: Text > 100KB
+   ├─ IMAGE: Screenshot or copied image
+   ├─ FILES: Copied files from Explorer/Finder
+   ├─ RICH_CONTENT: RTF, HTML with formatting
+   └─ MIXED: Multiple formats present
+4. Estimate total data size
+5. Determine safety level:
+   ├─ SAFE: Empty or small text only
+   ├─ RISKY: Large text or rich content
+   └─ UNSAFE: Images, files, or large data (>1MB)
+Safety Decision Tree:
+
+text
+Clipboard Analysis Result:
+├─ EMPTY or TEXT_SMALL (<100KB)
+│  └─ ✅ SAFE: Proceed with clipboard method
+│
+├─ TEXT_LARGE (>100KB) or RICH_CONTENT
+│  └─ ⚠️ RISKY: Save all formats, proceed carefully
+│
+└─ IMAGE, FILES, or data >1MB
+   └─ ❌ UNSAFE: Skip clipboard, return to try next tier
+Complete State Preservation
+Format Storage Structure:
+
+python
+ClipboardState = {
+    'formats': {
+        1: "Plain text data",              # CF_TEXT
+        13: b'{\rtf1 ...',                 # CF_UNICODETEXT
+        8: b'\x89PNG...',                  # CF_DIB (image)
+        15: ['C:\\file.txt'],              # CF_HDROP (files)
+        49312: b'custom data'              # Custom app format
+    },
+    'estimated_size': 5242880,             # 5 MB
+    'has_text': True,
+    'has_image': True,
+    'has_files': False,
+    'is_safe': False                       # Not safe due to image
+}
+Safe Insertion Process
+When clipboard analysis returns SAFE:
+
+text
+1. Save complete clipboard state (all formats)
+2. Clear clipboard
+3. Set suggestion text as CF_UNICODETEXT
+4. Simulate paste operation (Ctrl+V)
+5. Wait 50ms for application to process
+6. Verify text was inserted (read back from control)
+7. Clear clipboard again
+8. Restore ALL original formats from saved state
+9. Close clipboard
+
+Total time: 50-100ms
+When clipboard analysis returns UNSAFE:
+
+text
+Skip clipboard method entirely
+Return failure to main inserter
+Main inserter proceeds to Tier 3 or Tier 4
+User's clipboard remains untouched
+Paste Simulation Methods
+Primary: Standard keyboard shortcut
+
+text
+Send Key: Ctrl + Down
+Send Key: V + Down
+Wait: 10ms
+Send Key: V + Up
+Send Key: Ctrl + Up
+Alternative: Alt-based custom shortcut (conflict-free)
+
+text
+Send Key: Alt + Down
+Send Key: Shift + Down
+Send Key: Insert + Down
+Wait: 10ms
+Send Key: Insert + Up
+Send Key: Shift + Up
+Send Key: Alt + Up
+
+Note: This is intercepted by our keyboard hook
+      before reaching the application
+Success Rate: 95% when safety checks pass
+
+25.3 SendKeys Character Simulator (Tier 3 - Limited)
+Character-by-Character Typing
+Purpose: Simulate actual typing when APIs fail and clipboard unsafe. Only for very short text.
+
+Method:
+
+text
+For each character in text:
+  1. Convert character to virtual key code
+  2. Send WM_CHAR message to focused window (Windows)
+     OR Use CGEventCreateKeyboardEvent (macOS)
+     OR Use XTestFakeKeyEvent (Linux)
+  3. Wait 8-12ms between characters (appear natural)
+  4. Handle special characters (Shift for capitals, etc.)
+Limitations:
+
+text
+✅ Use only when:
+   - Text length < 50 characters
+   - Native API unavailable
+   - Clipboard unsafe
+
+❌ Do NOT use for:
+   - Long text (too slow: 50ms × 100 chars = 5 seconds)
+   - Formatted text (loses formatting)
+   - Multi-line text (line breaks complex)
+Advantages:
+
+✅ Works in 98% of applications
+
+✅ No clipboard involvement
+
+✅ Simple implementation
+
+Disadvantages:
+
+❌ Very slow (visible typing animation)
+
+❌ Can trigger app autocomplete
+
+❌ User can interrupt by typing
+
+Success Rate: 98% for text < 50 characters (but slow)
+
+25.4 Manual Copy Overlay (Tier 4 - Last Resort)
+User-Controlled Fallback
+Purpose: When all automation fails, provide easy manual copy.
+
+Overlay UI:
+
+text
+┌─────────────────────────────────────────┐
+│  📋 Copy Suggestion                     │
+├─────────────────────────────────────────┤
+│                                         │
+│  The quarterly results exceeded         │
+│  expectations across all key metrics.   │
+│                                         │
+│  [Copy to Clipboard]  [Dismiss]         │
+│                                         │
+│  Tip: Text will be copied safely        │
+│       without affecting your clipboard  │
+└─────────────────────────────────────────┘
+Behavior:
+
+text
+1. Show overlay with suggested text
+2. User clicks "Copy to Clipboard"
+3. Text copied to clipboard (native copy, safe)
+4. Show confirmation: "✓ Copied! Press Ctrl+V to paste"
+5. Overlay auto-dismisses after 3 seconds
+6. User manually pastes where needed
+When triggered:
+
+All automated methods failed (rare: 2-3%)
+
+Protected/secure text fields
+
+Custom controls without API access
+
+User preference (some prefer manual control)
+
+Success Rate: 100% (user-controlled)
+
+25.5 Insertion Validator
+Verification System
+Purpose: Confirm text was successfully inserted after any method.
+
+Validation Process:
+
+text
+1. Wait 50ms for application processing
+2. Read current text from focused control:
+   - Via UI Automation (GetCurrentPattern)
+   - Via Accessibility API (AXValue)
+   - Via DOM (element.value)
+3. Check if inserted text is present
+4. Verify cursor moved to expected position
+5. Return validation result:
+   - SUCCESS: Text found, cursor correct
+   - PARTIAL: Text found but cursor wrong
+   - FAILED: Text not found
+Retry Logic:
+
+text
+If validation returns FAILED:
+  - If attempt < 3:
+    - Try next tier method
+    - Revalidate
+  - If attempt >= 3:
+    - Proceed to manual fallback
+Validation Timeout: 200ms maximum
+
+25.6 Unified Insertion Controller
+Main Orchestrator
+Purpose: Coordinates all tiers and decides which method to use.
+
+Decision Algorithm:
+
+text
+function insert_text(text):
+    context = gather_context()  # App, platform, control type
+    
+    // TIER 1: Native API
+    if native_api_available(context):
+        result = native_api_insert(text, context)
+        if result.success and validate(result):
+            return SUCCESS_NATIVE
+    
+    // TIER 2: Smart Clipboard
+    clipboard_state = analyze_clipboard()
+    if clipboard_state.is_safe:
+        saved_clipboard = save_clipboard()
+        result = clipboard_insert(text)
+        restore_clipboard(saved_clipboard)
+        if result.success and validate(result):
+            return SUCCESS_CLIPBOARD
+    
+    // TIER 3: SendKeys (short text only)
+    if len(text) < 50:
+        result = sendkeys_insert(text)
+        if result.success and validate(result):
+            return SUCCESS_SENDKEYS
+    
+    // TIER 4: Manual
+    show_copy_overlay(text)
+    return MANUAL_FALLBACK
+25.7 Platform-Specific Implementations
+Windows Implementation Stack
+text
+Required Libraries:
+├─ comtypes (UI Automation COM interfaces)
+├─ pywin32 (Win32 API, clipboard)
+├─ pynput (keyboard simulation)
+└─ psutil (process/window detection)
+
+Primary Method: IUIAutomation + TextPattern
+Clipboard: win32clipboard (multi-format support)
+Validation: IUIAutomationElement.GetCurrentPropertyValue()
+macOS Implementation Stack
+text
+Required Libraries:
+├─ PyObjC (Objective-C bridge)
+├─ AppKit (NSPasteboard, NSWorkspace)
+├─ Quartz (CGEvent for key simulation)
+└─ Accessibility (AXUIElement)
+
+Primary Method: AXUIElement + AXValue
+Clipboard: NSPasteboard (type-safe)
+Validation: AXUIElementCopyAttributeValue()
+Linux Implementation Stack
+text
+Required Libraries:
+├─ pyatspi (AT-SPI bindings)
+├─ python-xlib (X11 window system)
+├─ PyGObject (GTK clipboard)
+└─ xdotool (keyboard simulation)
+
+Primary Method: AT-SPI EditableText interface
+Clipboard: gtk.Clipboard or xclip
+Validation: Accessible.get_text()
+Browser Extension Stack
+text
+Technology:
+├─ Manifest V3 (Chrome extension)
+├─ Content Scripts (DOM access)
+├─ Background Service Worker
+└─ Native Messaging (desktop communication)
+
+Primary Method: Direct DOM manipulation
+No clipboard needed: element.value API
+Validation: Read element.value after insert
+25.8 Error Handling & Logging
+Comprehensive Error Tracking
+Log Each Attempt:
+
+text
+{
+    "timestamp": "2026-01-30T11:48:23Z",
+    "method_attempted": "ui_automation",
+    "success": false,
+    "error_type": "ValuePatternNotSupported",
+    "fallback_used": "smart_clipboard",
+    "final_success": true,
+    "total_time_ms": 67,
+    "app_name": "Notepad++",
+    "text_length": 45
+}
+Analytics:
+
+text
+Track success rates per:
+├─ Method (native/clipboard/sendkeys/manual)
+├─ Application (Word/Chrome/Slack/etc.)
+├─ Platform (Windows/macOS/Linux)
+├─ Text length (<10 / 10-50 / 50-100 / >100 chars)
+└─ Time of day (performance patterns)
+25.9 Performance Metrics
+Expected Performance
+Method	Avg Speed	Min Speed	Max Speed	Reliability
+Native API	22ms	5ms	45ms	75-85%
+Smart Clipboard	65ms	50ms	120ms	95% (when safe)
+SendKeys	850ms	500ms	5000ms	98% (slow)
+Manual	User-dependent	-	-	100%
+Overall System Performance
+text
+Expected Success Breakdown:
+├─ 78% via Native API (fast, clean)
+├─ 12% via Smart Clipboard (safe fallback)
+├─ 3% via SendKeys (slow but works)
+└─ 7% via Manual Fallback (user action)
+
+Total Automated: 93%
+User Intervention: 7%
+
+Average Insertion Time: 45ms (weighted average)
+Clipboard Data Loss: 0% (protected by detection)
+25.10 User Configuration Options
+Settings Panel
+text
+Insertion Method Priority:
+○ Automatic (Recommended)
+  ├─ Try native API first
+  ├─ Fall back to clipboard if safe
+  └─ Manual if all fail
+
+○ Always preserve clipboard
+  ├─ Never use clipboard method
+  ├─ Only native API or manual
+  └─ May reduce success rate to 85%
+
+○ Speed optimized
+  ├─ Use clipboard more aggressively
+  ├─ Only check for images/files
+  └─ Slightly faster but riskier
+
+Clipboard Safety:
+☑ Never overwrite images
+☑ Never overwrite files
+☑ Preserve text > 100KB
+☐ Allow clipboard use for small text (default: on)
+
+Fallback Behavior:
+○ Show copy overlay (default)
+○ Show notification only
+○ Silent (log only)
+Summary: Module 25 Final Design
+Key Features
+✅ Intelligent Multi-Tier System
+
+Native APIs prioritized (75-85% success)
+
+Smart clipboard as reliable fallback (95% when used)
+
+No user data loss (clipboard detection)
+
+✅ Platform-Native Implementation
+
+Windows: UI Automation
+
+macOS: Accessibility API
+
+Linux: AT-SPI
+
+Browser: DOM manipulation
+
+✅ Production-Ready Reliability
+
+93% automated success rate
+
+100% clipboard data preservation
+
+Comprehensive error handling
+
+Performance logging
+
+✅ User-Centric Design
+
+Fast (average 45ms insertion)
+
+Safe (clipboard protected)
+
+Configurable (user preferences)
+
+Transparent (shows what happened)
+
+This is the Grammarly-grade, production-ready text insertion system.
 
 ## Module 26: Window Analyzer
 
@@ -7035,18 +7420,7 @@ These 10 modules handle **platform-specific implementation and specialized code 
 [^9_5]: AI_KEYBOARD_ENHANCED_FEATURES_REPORT.md
 
 
----
 
-# AI Keyboard - Complete Module Documentation
-
-## Part 4: Browser, Mobile \& Backend Infrastructure (Modules 31-40)
-
-> **Document Version:** 1.0
-> **Date:** January 30, 2026, 1:22 AM IST
-> **Scope:** Detailed explanation of Modules 31-40
-> **Purpose:** Cross-platform implementation and backend systems
-
-***
 
 ## Module 31: DOM Context Extractor
 
@@ -9599,18 +9973,6 @@ Distributes token budget across context types:
 
 **Budget allocation**:
 
-```
-System prompt:        200 tokens (fixed)
-User profile:         100 tokens (style, preferences)
-Current text:         800 tokens (text before/after cursor)
-App context:          300 tokens (app type, document structure)
-Cross-app context:    200 tokens (recent apps, workflow)
-Clipboard:            150 tokens (if relevant)
-Mood/behavioral:      100 tokens (mood, typing patterns)
-Feedback hints:       150 tokens (recent accepts/rejects)
--------------------------------------------
-Total:               2000 tokens
-```
 
 **Priority system**:
 
@@ -10491,158 +10853,332 @@ Monitors and alerts on slow performance:
 
 ## Module 49: Text Similarity Engine
 
-### Overview
+ (Simplified)
+Overview
+The Text Similarity Engine measures text relatedness for clipboard relevance, duplicate detection, and context matching. Simplified to essential functionality only.
 
-The Text Similarity Engine measures **how related two pieces of text are**. Used for clipboard relevance, duplicate detection, and context matching.[^11_1]
+Core Responsibilities
+49.1 Basic Similarity Calculator
+Purpose: Quick text comparison using simple, fast methods.
 
-### Core Responsibilities
+Method: TF-IDF + Cosine Similarity (Primary)
 
-#### 49.1 Semantic Similarity Calculator (for Clipboard Relevance)[^11_1]
+text
+Process:
+1. Tokenize both texts into words
+2. Build vocabulary from both texts
+3. Convert to TF-IDF vectors
+4. Calculate cosine similarity
+5. Return score (0.0 = unrelated, 1.0 = identical)
 
-Determines if clipboard content relates to current typing:
+Time: 3-8ms
+Accuracy: 80-85% for most cases
+Works offline: ✅
+Fallback: Simple Word Overlap
 
-**Similarity methods**:
+text
+Process:
+1. Split texts into words
+2. Convert to lowercase
+3. Remove common stopwords (the, a, is, of)
+4. Count shared words
+5. Similarity = shared_words / min(words1, words2)
 
-**Method 1: TF-IDF + Cosine Similarity**:
+Time: 1-3ms
+Accuracy: 70-75%
+Works offline: ✅
+Usage:
 
-- Convert both texts to TF-IDF vectors
-- Calculate cosine similarity between vectors
-- Range: 0.0 (unrelated) to 1.0 (identical)
-- Fast, works offline
+text
+Clipboard: "Revenue increased by 15% this quarter"
+Current typing: "The financial performance was strong"
 
-**Method 2: Word Overlap**:
+Shared words: {financial, performance}
+TF-IDF score: 0.42
+Decision: Medium relevance → Include in context
+49.2 Duplicate Detection
+Purpose: Identify if suggestion is duplicate or too similar to existing text.
 
-- Count shared meaningful words
-- Exclude common words (the, a, is)
-- Similarity = shared_words / min(words_text1, words_text2)
+Method: Exact and Fuzzy Matching
 
-**Method 3: Embedding Similarity** (advanced):
+text
+Check 1: Exact match
+  - Compare strings directly (case-insensitive)
+  - If identical → Duplicate (1.0)
 
-- Use sentence embeddings (e.g., Sentence-BERT)
-- Calculate cosine similarity in embedding space
-- Captures semantic meaning better
-- Slower, requires model
+Check 2: Normalized match
+  - Remove punctuation, extra spaces
+  - Lowercase comparison
+  - If match → Duplicate (1.0)
 
-**Example**:
+Check 3: High similarity
+  - TF-IDF similarity > 0.9
+  - Nearly identical → Mark as duplicate
+Use Case:
 
-- Clipboard: "Revenue: \$2.4M (+15% YoY)"
-- Current text: "In conclusion, our financial performance exceeded expectations"
-- Shared concepts: Financial, performance, growth
-- TF-IDF similarity: 0.68
-- Word overlap: 0.0 (no shared words, but related)
-- Embedding similarity: 0.72 (captures semantic relation)
-- **Final similarity**: 0.72 (use embedding if available, else TF-IDF)
+text
+Existing suggestion: "The quarterly results exceeded expectations"
+New suggestion: "the quarterly results exceeded expectations."
+Result: Duplicate detected, skip showing
+49.3 Clipboard Relevance Checker
+Purpose: Determine if clipboard content relates to current typing.
 
-**Use in clipboard relevance**:[^11_1]
+Simple Relevance Scoring:
 
-- Similarity >0.7: High relevance, include in context
-- Similarity 0.5-0.7: Medium relevance, brief mention
-- Similarity <0.5: Low relevance, exclude
+text
+1. Calculate TF-IDF similarity
+2. Apply threshold:
+   - Score > 0.6 → High relevance (include in context)
+   - Score 0.4-0.6 → Medium relevance (brief mention)
+   - Score < 0.4 → Low relevance (exclude)
+3. Return relevance level
+Example:
 
+text
+Clipboard: "$2.4M revenue, 15% growth"
+Current text: "In conclusion, our sales performance"
 
-#### 49.2 Vector Embedding Generator
+Similarity: 0.52
+Relevance: Medium
+Action: Show as context hint, don't force into suggestion
+49.4 Pattern Matcher
+Purpose: Identify common text patterns and structures.
 
-Converts text to numerical vectors:
+Basic Patterns:
 
-**Embedding models**:
+text
+Financial patterns:
+  - "$X.XM" or "$XM" → Money amounts
+  - "X%" → Percentages
+  - "Q1, Q2, Q3, Q4" → Quarters
+  - "YoY, MoM" → Growth metrics
 
-- **Local**: Sentence-BERT (110MB model, runs on CPU)
-- **Lightweight**: Universal Sentence Encoder Lite (40MB)
-- **Cloud**: OpenAI embeddings API (highest quality)
+Email patterns:
+  - "Dear [Name]," → Greeting
+  - "Best regards," → Closing
+  - Email addresses (regex)
 
-**Embedding process**:
+Code patterns:
+  - "def ", "function ", "class " → Code
+  - "#TODO", "//TODO" → Comments
+  
+Date patterns:
+  - "Jan, Feb, Mar..." → Months
+  - "01/31/2026" → Dates
+  - "Monday, Tuesday..." → Days
+Use Case:
 
-```python
-# Input text
-text = "The quarterly report shows strong growth"
+text
+Detect clipboard contains financial data:
+  - Pattern found: "$2.4M", "15%", "Q4"
+  - Type: Financial
+  - Boost relevance if user typing financial content
+49.5 Context Type Classifier
+Purpose: Identify what kind of content user is working with.
 
-# Generate embedding (384-dim vector)
-embedding = model.encode(text)
-# Result: [0.23, -0.15, 0.67, ..., 0.42]  # 384 numbers
+Simple Classification:
 
-# Compare with another text
-text2 = "Financial results exceeded expectations"
-embedding2 = model.encode(text2)
+text
+Check for keywords and patterns:
 
-# Calculate similarity
-similarity = cosine_similarity(embedding, embedding2)
-# Result: 0.78 (high similarity)
-```
+Business/Financial:
+  - Keywords: revenue, profit, sales, growth, quarter
+  - Patterns: $X, X%, YoY
+  - Confidence based on keyword count
 
-**Caching**:
+Technical/Code:
+  - Keywords: function, class, import, return
+  - Patterns: {}, (), [], def, const
+  
+Email/Communication:
+  - Keywords: dear, regards, meeting, attached
+  - Patterns: email addresses, "Dear X,"
+  
+Casual/General:
+  - No specific patterns
+  - Default category
+Example:
 
-- Cache embeddings for clipboard content (save recomputation)
-- Cache embeddings for frequent phrases
-- Clear cache when clipboard changes
+text
+Text: "The Q4 revenue was $2.4M, up 15% YoY"
+Keywords found: revenue (1), Q4 (1), $2.4M (1), 15% (1), YoY (1)
+Classification: Business/Financial (high confidence)
+Implementation
+Simple TF-IDF Similarity
+python
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-**Use cases**:
+class SimpleSimilarityEngine:
+    """Lightweight similarity engine"""
+    
+    def __init__(self):
+        self.vectorizer = TfidfVectorizer(
+            stop_words='english',
+            max_features=200  # Limit for speed
+        )
+    
+    def similarity(self, text1: str, text2: str) -> float:
+        """
+        Calculate similarity between two texts
+        Returns: 0.0 to 1.0
+        """
+        try:
+            # Create TF-IDF matrix
+            tfidf = self.vectorizer.fit_transform([text1, text2])
+            
+            # Cosine similarity
+            score = cosine_similarity(tfidf[0:1], tfidf[1:2])[0][0]
+            
+            return float(score)
+            
+        except:
+            # Fallback to word overlap
+            return self._word_overlap(text1, text2)
+    
+    def _word_overlap(self, text1: str, text2: str) -> float:
+        """Simple word overlap similarity"""
+        
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        
+        # Remove stopwords
+        stopwords = {'the', 'a', 'is', 'of', 'and', 'to', 'in', 'for'}
+        words1 -= stopwords
+        words2 -= stopwords
+        
+        if not words1 or not words2:
+            return 0.0
+        
+        shared = len(words1 & words2)
+        total = min(len(words1), len(words2))
+        
+        return shared / total if total > 0 else 0.0
+Clipboard Relevance
+python
+def check_clipboard_relevance(clipboard_text: str, 
+                              current_text: str) -> str:
+    """
+    Check if clipboard is relevant to current typing
+    
+    Returns: "high" | "medium" | "low"
+    """
+    
+    engine = SimpleSimilarityEngine()
+    score = engine.similarity(clipboard_text, current_text)
+    
+    if score > 0.6:
+        return "high"
+    elif score > 0.4:
+        return "medium"
+    else:
+        return "low"
+Duplicate Detection
+python
+def is_duplicate(text1: str, text2: str) -> bool:
+    """
+    Check if two texts are duplicates
+    
+    Returns: True if duplicate
+    """
+    
+    # Normalize
+    norm1 = text1.lower().strip().replace(" ", "")
+    norm2 = text2.lower().strip().replace(" ", "")
+    
+    # Exact match
+    if norm1 == norm2:
+        return True
+    
+    # High similarity
+    engine = SimpleSimilarityEngine()
+    if engine.similarity(text1, text2) > 0.9:
+        return True
+    
+    return False
+Use Cases
+1. Clipboard Relevance for Suggestions
+text
+User copies: "Revenue: $2.4M, up 15%"
+User types: "The financial results were"
 
-- Clipboard similarity[^11_1]
-- Cross-app context relatedness[^11_4]
-- Duplicate suggestion detection
+Check relevance:
+├─ Calculate similarity: 0.58
+├─ Result: Medium relevance
+└─ Action: Include clipboard data in LLM context
+           "Context: User has financial data in clipboard"
+2. Duplicate Suggestion Filtering
+text
+Existing suggestions: ["exceeded expectations", "surpassed forecasts"]
+New suggestion: "exceeded expectations"
 
+Check duplicates:
+├─ Compare with existing[0]: Exact match
+└─ Result: Skip, already shown
+3. Context Type Detection
+text
+Current text: "def calculate_revenue(sales, costs):"
 
-#### 49.3 Pattern Matcher
+Detect patterns:
+├─ Pattern found: "def " (Python function)
+├─ Type: Code
+└─ Action: Use code-aware suggestions
+Performance Metrics
+Operation	Time	Accuracy	Use Case
+TF-IDF Similarity	3-8ms	80%	Clipboard relevance
+Word Overlap	1-3ms	70%	Quick checks
+Duplicate Detection	2-5ms	95%	Filter suggestions
+Pattern Matching	<1ms	90%	Content type
+Configuration
+Relevance Thresholds
+python
+SIMILARITY_THRESHOLDS = {
+    'high_relevance': 0.6,      # Include in context
+    'medium_relevance': 0.4,    # Brief mention
+    'low_relevance': 0.0,       # Exclude
+    'duplicate': 0.9            # Too similar
+}
+Stopwords
+python
+STOPWORDS = {
+    'the', 'a', 'an', 'is', 'are', 'was', 'were',
+    'of', 'in', 'to', 'for', 'and', 'or', 'but',
+    'this', 'that', 'these', 'those', 'with'
+}
+Summary
+What This Module Does
+✅ Text Similarity
 
-Finds text patterns and structures:
+TF-IDF for main comparisons (3-8ms)
 
-**Pattern types**:
+Word overlap as fallback (1-3ms)
 
-**Exact match**:
+✅ Clipboard Relevance
 
-- Identical text
-- Case-sensitive or insensitive
-- Used for: Duplicate detection
+Checks if clipboard relates to typing
 
-**Fuzzy match**:
+Returns high/medium/low relevance
 
-- Allow minor differences (typos, spacing)
-- Levenshtein distance <3
-- Used for: Similar suggestions
+✅ Duplicate Detection
 
-**Regex patterns**:
+Prevents showing same suggestion twice
 
-- Structural patterns (email, phone, URL)
-- Domain-specific patterns (code syntax)
-- Used for: Content type detection
+Exact match + similarity check
 
-**N-gram overlap**:
+✅ Pattern Recognition
 
-- Shared word sequences
-- Trigram overlap: "the quick brown" vs "quick brown fox"
-- Used for: Similarity estimation
+Identifies financial data, code, emails
 
-**Example patterns**:
+Simple keyword and regex matching
 
-```
-Financial data pattern:
-- "$X.XM" → Revenue mention
-- "X% YoY" → Year-over-year growth
-- "EBITDA" → Financial metric
+What This Module Does NOT Do
+❌ No advanced embeddings (too slow, unnecessary)
+❌ No ML models (keep it simple)
+❌ No complex semantic analysis (overkill)
+❌ No cloud APIs (works offline)
 
-Code pattern:
-- "def function_name(" → Python function
-- "import * from *" → Import statement
-- "# TODO" → Code comment
-
-Email pattern:
-- "Dear [Name]," → Email greeting
-- "Best regards," → Email closing
-```
-
-**Use cases**:
-
-- Detect duplicate suggestions (pattern match)
-- Identify context type (email, code, data)
-- Extract structured information
-
-***
-
-## Module 50: Prompt Template Manager
-
-### Overview
-
-The Prompt Template Manager maintains **pre-built LLM prompt structures** for different tasks. It ensures prompts are consistent, optimized, and context-appropriate.[^11_1][^11_3]
+Result
+Simple, fast, effective similarity engine for clipboard and duplicate detection. No complexity, no latency issues.
 
 ### Core Responsibilities
 
@@ -10794,18 +11330,7 @@ Creates prompts within token limits:
 
 **Token budget allocation**:[^11_3]
 
-```
-Total budget: 2000 tokens
 
-Template breakdown:
-- System prompt (fixed): 150 tokens
-- Task instruction (fixed): 100 tokens
-- Output format (fixed): 50 tokens
-- Context (variable): up to 1200 tokens
-- Current text (variable): up to 500 tokens
-
-Total: ~2000 tokens
-```
 
 **Context optimization**:
 
@@ -11975,6 +12500,372 @@ Rationale:
 
 ***
 
+# Module 54(extension of 51,52,53,54): Universal Application Support System
+Overview
+The Universal Application Support System ensures AI Keyboard works excellently in ALL applications, regardless of whether they have specialized optimization modules. Provides strong baseline intelligence everywhere, with optional enhancements for recognized apps.
+
+Core Principle
+text
+BASELINE (Generic Mode)          ENHANCEMENT (Specialized Mode)
+     Excellent                           Excellent++
+         ↓                                    ↓
+   Works in 100%                      Works in recognized apps
+   of applications                    (Gmail, Code, Chat, Docs)
+Key Insight: AI Keyboard is never disabled or degraded in unknown apps.
+
+64.1 Universal Intelligence Layer
+Purpose: Provide full AI capabilities in any application without specialized modules.
+
+Features Available in Generic Mode:
+
+text
+✅ Smart Text Completion
+   ├─ N-gram word suggestions (3 words)
+   ├─ LLM sentence completions
+   └─ Context from surrounding text
+
+✅ Real-Time Error Detection
+   ├─ Spelling mistakes (red underline)
+   ├─ Grammar errors (blue underline)
+   └─ Style suggestions (green underline)
+
+✅ Intelligent Rewrites
+   ├─ User-prompted transformations
+   ├─ Tone adjustments (formal/casual)
+   └─ Expansion/simplification
+
+✅ Clipboard Intelligence
+   ├─ Relevance detection
+   ├─ Smart incorporation suggestions
+   └─ Cross-app context awareness
+
+✅ Typing Behavior Learning
+   ├─ Speed and rhythm adaptation
+   ├─ Personal style matching
+   └─ Mood-aware suggestions
+
+✅ Cross-App Context
+   ├─ Workflow tracking
+   ├─ Recent app memory
+   └─ Content relationship detection
+Performance: Same quality as specialized modules, just without app-specific optimizations.
+
+64.2 Application Detection System
+Purpose: Identify which application user is typing in and determine if specialized module exists.
+
+Detection Methods:
+
+text
+Method 1: Process Name Matching
+├─ Read active window process name
+├─ Match against known application signatures
+└─ Example: "WINWORD.EXE" → Document editor
+
+Method 2: Window Title Analysis
+├─ Extract window title text
+├─ Parse for context clues
+└─ Example: "main.py - VS Code" → Code editor (Python)
+
+Method 3: Browser Extension Detection (Web Apps)
+├─ Extension reads URL and DOM structure
+├─ Identifies web applications
+└─ Example: "mail.google.com" → Gmail
+
+Method 4: Fallback Classification
+├─ If no match found → "unknown"
+└─ Routes to generic mode (still excellent!)
+Known Application Registry:
+
+python
+APP_SIGNATURES = {
+    # Email
+    'OUTLOOK.EXE': 'email',
+    'thunderbird.exe': 'email',
+    
+    # Code Editors
+    'Code.exe': 'code',
+    'sublime_text.exe': 'code',
+    'pycharm64.exe': 'code',
+    
+    # Chat
+    'slack.exe': 'chat',
+    'discord.exe': 'chat',
+    'teams.exe': 'chat',
+    
+    # Documents
+    'WINWORD.EXE': 'document',
+    'EXCEL.EXE': 'spreadsheet',
+    'POWERPNT.EXE': 'presentation',
+    
+    # Browsers (deep detection via extension)
+    'chrome.exe': 'browser',
+    'firefox.exe': 'browser',
+    
+    # Generic text
+    'notepad.exe': 'plaintext',
+    
+    # Unknown → Generic mode
+    # Everything else
+}
+Output:
+
+python
+AppContext {
+    process_name: "jira_app.exe",
+    window_title: "BUG-1234 - Jira",
+    app_type: "unknown",           # Not in registry
+    has_specialized_module: False, # No specific optimization
+    mode: "generic"                # Full features, no extras
+}
+64.3 Adaptive Suggestion Router
+Purpose: Route suggestions through specialized modules when available, use baseline otherwise.
+
+Routing Logic:
+
+text
+┌─────────────────────────────────────┐
+│  User Types in Application          │
+└────────────┬────────────────────────┘
+             ↓
+┌─────────────────────────────────────┐
+│  App Detection System (64.2)        │
+│  Identifies app type                │
+└────────────┬────────────────────────┘
+             ↓
+      ┌──────┴──────┐
+      │             │
+   Known app?    Unknown app?
+      │             │
+      ↓             ↓
+┌──────────┐  ┌──────────────┐
+│ Gmail    │  │ Generic Mode │
+│ VS Code  │  │ (Universal)  │
+│ Slack    │  │              │
+│ Word     │  │ Full AI      │
+└────┬─────┘  │ capabilities │
+     │        └──────┬───────┘
+     ↓               ↓
+┌─────────────────────────────┐
+│ Generate Baseline Suggestions│
+│ - N-gram completions         │
+│ - LLM intelligent completion │
+│ - Error detection            │
+│ - Clipboard integration      │
+└────────┬────────────────────┘
+         ↓
+    ┌────┴─────┐
+    │          │
+Specialized  Generic
+  Module      Mode
+    │          │
+    ↓          ↓
+┌─────────┐ ┌─────────┐
+│ Enhance │ │ Return  │
+│ with    │ │ as-is   │
+│ app     │ │         │
+│ features│ │         │
+└────┬────┘ └────┬────┘
+     │           │
+     └─────┬─────┘
+           ↓
+    ┌──────────────┐
+    │ Display to   │
+    │ User         │
+    └──────────────┘
+Example Routing:
+
+text
+Scenario 1: Gmail (Specialized)
+├─ Detect: "chrome.exe" + "mail.google.com"
+├─ Route: Email module (Module 58)
+├─ Baseline: N-gram + LLM + Grammar
+├─ Enhancement: Email greetings, sign-offs, recipient context
+└─ Result: Excellent++
+
+Scenario 2: Jira (Generic)
+├─ Detect: "chrome.exe" + "jira.atlassian.com"
+├─ Route: Generic mode (Module 64.1)
+├─ Baseline: N-gram + LLM + Grammar
+├─ Enhancement: None (no specialized module)
+└─ Result: Excellent (same baseline quality)
+
+Scenario 3: Custom Internal Tool (Generic)
+├─ Detect: "company_tool.exe"
+├─ Route: Generic mode (Module 64.1)
+├─ Baseline: Full AI capabilities
+├─ Enhancement: None
+└─ Result: Excellent
+64.4 Specialized Module Enhancement Layer
+Purpose: Apply app-specific intelligence when specialized module exists.
+
+Enhancement Types:
+
+text
+Email Module Enhancement:
+├─ Greeting detection ("Dear", "Hi", "Hello")
+├─ Sign-off suggestions ("Best regards", "Thanks")
+├─ Recipient-aware tone
+├─ Subject line context
+└─ Thread awareness
+
+Code Module Enhancement:
+├─ Syntax-aware completions
+├─ Import statement suggestions
+├─ Variable name consistency
+├─ Language-specific patterns
+└─ Multi-file context
+
+Chat Module Enhancement:
+├─ Casual tone preference
+├─ Emoji suggestions
+├─ Quick reply patterns
+├─ GIF/reaction suggestions
+└─ Channel-aware language
+
+Document Module Enhancement:
+├─ Formal tone preference
+├─ Structure awareness (headings, sections)
+├─ Citation format
+├─ Professional vocabulary
+└─ Document type detection (report, memo, etc.)
+Enhancement Process:
+
+python
+def enhance_suggestions(baseline_suggestions, app_context):
+    """
+    Apply app-specific enhancements if available
+    Otherwise return baseline as-is
+    """
+    
+    if app_context.app_type == 'email':
+        return email_module.enhance(baseline_suggestions)
+        
+    elif app_context.app_type == 'code':
+        return code_module.enhance(baseline_suggestions)
+        
+    elif app_context.app_type == 'chat':
+        return chat_module.enhance(baseline_suggestions)
+        
+    elif app_context.app_type == 'document':
+        return document_module.enhance(baseline_suggestions)
+        
+    else:
+        # Generic mode - baseline is already excellent
+        return baseline_suggestions
+64.5 Coverage Statistics
+Application Coverage:
+
+text
+Specialized Modules (4 app types):
+├─ Gmail/Email clients: ~15% typing time
+├─ VS Code/IDEs: ~20% typing time
+├─ Slack/Chat apps: ~10% typing time
+└─ Word/Documents: ~15% typing time
+Total: ~60% of typing with enhancements
+
+Generic Mode (everything else):
+├─ Excel/Spreadsheets: ~10% typing time
+├─ PowerPoint/Presentations: ~5% typing time
+├─ Browsers (non-Gmail): ~8% typing time
+├─ Notion/Note apps: ~7% typing time
+├─ Custom/SaaS tools: ~10% typing time
+Total: ~40% of typing with baseline (still excellent)
+
+Overall Coverage: 100% of applications supported
+Quality in generic mode: Same baseline as specialized
+64.6 Expansion Strategy
+Phase 1: MVP (Current)
+
+text
+✅ Universal baseline works everywhere
+✅ 4 specialized modules (Email, Code, Chat, Docs)
+✅ Generic mode provides full intelligence
+Result: Works excellently in 100% of apps
+Phase 2: Expand Specialized Modules
+
+text
+Add:
+├─ Spreadsheet module (Excel, Sheets)
+├─ Presentation module (PowerPoint, Slides)
+├─ Note-taking module (Notion, Obsidian)
+└─ CRM/SaaS module (Salesforce, HubSpot)
+Result: Enhanced experience in 85% of apps
+Phase 3: Community Modules
+
+text
+Add:
+├─ Plugin system for custom modules
+├─ Community marketplace
+├─ User-created app optimizations
+└─ AI-generated module suggestions
+Result: Unlimited expansion potential
+64.7 User Experience
+In Specialized App (e.g., Gmail):
+
+text
+User types: "Dear John, I wanted to discuss"
+
+Suggestions:
+├─ N-gram: ["the", "our", "about"]
+├─ LLM: "the upcoming project timeline"
+├─ Email enhancement: "Would you be available for a meeting?"
+└─ Sign-off suggestion: (shown after message body)
+
+Experience: Excellent++ with email-specific help
+In Generic App (e.g., Jira):
+
+text
+User types: "The login page is throwing"
+
+Suggestions:
+├─ N-gram: ["a", "an", "errors"]
+├─ LLM: "a 500 error when users attempt to log in"
+├─ Grammar: ✓ No errors
+└─ Clipboard: Error log available (relevance: 0.78)
+
+Experience: Excellent with full AI capabilities
+Key Point: Both experiences are high-quality. Generic mode is NOT degraded.
+
+Implementation Priority
+text
+Priority 1 (Week 1-2):
+✅ Universal Intelligence Layer (64.1)
+├─ N-gram engine
+├─ LLM integration
+├─ Grammar checking
+└─ Clipboard intelligence
+
+Priority 2 (Week 2-3):
+✅ App Detection System (64.2)
+├─ Process name matching
+├─ Window title parsing
+└─ App type classification
+
+Priority 3 (Week 3-4):
+✅ Adaptive Router (64.3)
+├─ Routing logic
+├─ Baseline generation
+└─ Enhancement application
+
+Priority 4 (Week 4+):
+✅ Specialized Modules (64.4)
+├─ Email module
+├─ Code module
+├─ Chat module
+└─ Document module
+Summary
+What This Module Provides:
+
+✅ 100% application coverage - Works everywhere
+✅ Strong baseline intelligence - Generic mode is excellent
+✅ Graceful enhancement - Better in specialized apps
+✅ No degradation - Never "off" or "limited" in unknown apps
+✅ Expandable architecture - Easy to add new app modules
+✅ Seamless experience - User never notices routing
+
+Result: AI Keyboard works excellently in ALL applications, not just the 4 with specialized modules.
+
+
 ## Module 55: Command Mode Interface
 
 ### Overview
@@ -12204,6 +13095,7 @@ Controls:
 ### Overview
 
 The Grammar \& Spell Check Engine provides **real-time error detection and correction**. It identifies spelling, grammar, and style issues as users type.[^12_3]
+for errors red underlines are shown exactly under words in overlay...
 
 ### Core Responsibilities
 
@@ -13113,1435 +14005,4 @@ On reconnect:
 
 
 ***
-
-## Module 60: Multi-Language Support
-
-### Overview
-
-The Multi-Language Support module enables **AI Keyboard in multiple languages**. It handles language detection, model selection, and localized suggestions.[^12_3]
-
-### Core Responsibilities
-
-#### 60.1 Language Detector[^12_3]
-
-Identifies typing language:
-
-**Detection methods**:
-
-**Character set analysis**:
-
-- Latin alphabet → English, Spanish, French, German, etc.
-- Cyrillic → Russian, Ukrainian, Bulgarian
-- CJK characters → Chinese, Japanese, Korean
-- Arabic script → Arabic, Persian, Urdu
-
-**N-gram probability**:
-
-```python
-def detect_language(text):
-    # Calculate probability for each language
-    scores = {}
-    for lang in supported_languages:
-        scores[lang] = ngram_model[lang].score(text)
-    
-    # Return highest probability
-    return max(scores, key=scores.get)
-```
-
-**Common word patterns**:
-
-- English: "the", "is", "and", "to"
-- Spanish: "el", "la", "de", "que"
-- French: "le", "la", "de", "et"
-- German: "der", "die", "das", "und"
-
-**Mixed language detection**:
-
-```
-Text: "Let
-
-
-<div align="center">⁂</div>
-
-[^12_1]: CORE_INTELLIGENCE_DESIGN.md
-[^12_2]: SOLUTION_DECISIONS.md
-[^12_3]: AI_KEYBOARD_ENHANCED_FEATURES_REPORT.md
-[^12_4]: ai_keyboard_sol.md
-[^12_5]: GRAMMARLY_TECHNICAL_RESEARCH.md
-
----
-
-# continue and part 7 complete in one stretch
-
-*Continuing Module 60 Multi-Language Support...*
-
-```
-
-Text: "Let's meet at 3 PM pour discuter du projet"
-Detection: Mixed English + French
-Primary: English (60%)
-Secondary: French (40%)
-Strategy: Use English model, recognize French phrases
-
-```
-
-**Context-based detection**:
-- App language setting (Gmail in Spanish → likely Spanish)
-- System locale (French Windows → likely French)
-- Previous typing language (user consistency)
-- Domain of current app (`.de` domain → likely German)
-
-#### 60.2 Language Model Selector[^13_1]
-Chooses appropriate model for detected language:
-
-**Model library**:
-```
-
-Available models by language:
-├─ English: ngram_en, llm_en, grammar_en
-├─ Spanish: ngram_es, llm_es, grammar_es
-├─ French: ngram_fr, llm_fr, grammar_fr
-├─ German: ngram_de, llm_de, grammar_de
-├─ Japanese: ngram_ja, llm_ja
-├─ Chinese (Simplified): ngram_zh_cn, llm_zh_cn
-├─ Portuguese: ngram_pt, llm_pt
-├─ Russian: ngram_ru, llm_ru
-└─ Hindi: ngram_hi, llm_hi
-
-```
-
-**Model loading strategy**:
-- Primary language: Always loaded in memory
-- Secondary languages: Load on demand
-- Rare languages: Download on first use
-- Model cache: Keep 2-3 recently used languages loaded
-
-**Multilingual LLM fallback**:
-- If dedicated language model unavailable: Use multilingual model
-- Quality: Slightly lower but still functional
-- Coverage: 50+ languages supported
-
-#### 60.3 Localized Grammar Rules[^13_1]
-Language-specific error detection:
-
-**Language-specific rules**:
-
-**English**:
-- Articles: a/an/the usage
-- Subject-verb agreement
-- Verb tenses consistency
-- Preposition usage
-
-**Spanish**:
-- Gender agreement (el/la, masculine/feminine)
-- Verb conjugations (ser vs estar)
-- Subjunctive mood
-- Accent marks (é, á, í, ó, ú)
-
-**French**:
-- Noun gender (le/la)
-- Verb agreement with subject
-- Accents (è, é, ê, à, ù, ç)
-- Liaison rules
-
-**German**:
-- Noun capitalization (all nouns capitalized)
-- Case system (nominative, accusative, dative, genitive)
-- Gender agreement (der/die/das)
-- Compound word formation
-
-**Grammar rule examples**:
-
-**Spanish gender agreement**:
-```
-
-Error: "El casa es grande"
-Correct: "La casa es grande"
-Explanation: "casa" is feminine, requires "la"
-
-```
-
-**French accent correction**:
-```
-
-Error: "Je prefere le cafe"
-Correct: "Je préfère le café"
-Explanation: Missing accents on préfère and café
-
-```
-
-**German noun capitalization**:
-```
-
-Error: "Ich mag den hund"
-Correct: "Ich mag den Hund"
-Explanation: All German nouns capitalized
-
-```
-
-#### 60.4 Translation Assist Mode
-Helps with cross-language writing:
-
-**Translation context detection**:
-```
-
-User in English document types: "Como se dice 'deadline' en español?"
-Detection: Translation query
-AI suggests: "fecha límite" or "plazo"
-
-```
-
-**Inline translation**:
-```
-
-User types: "The [fr:réunion] is at 3 PM"
-AI recognizes: French word in English text
-AI suggests: "The meeting is at 3 PM"
-or leaves as: "The réunion is at 3 PM" (if appropriate)
-
-```
-
-**Language mixing support**:
-- Technical terms: Keep in original language
-- Proper nouns: Don't translate
-- Code-switching: Natural in multilingual contexts
-- Cognates: Recognize similar words across languages
-
-#### 60.5 Regional Dialect Handler
-Manages language variants:
-
-**English variants**:
-- US English: "color", "organize", "center"
-- UK English: "colour", "organise", "centre"
-- Australian English: Colloquialisms, spelling like UK
-- Canadian English: Mix of US/UK conventions
-
-**Spanish variants**:
-- Spain Spanish (Castilian): "vosotros", "ordenador"
-- Latin American Spanish: "ustedes", "computadora"
-- Mexican Spanish: Regional vocabulary
-- Argentine Spanish: "vos" instead of "tú"
-
-**Portuguese variants**:
-- Brazilian Portuguese: Different vocabulary, spelling
-- European Portuguese: More formal, different pronunciation markers
-
-**Dialect detection**:
-- User location (IP, system locale)
-- Consistent spelling patterns
-- Vocabulary choices
-- User preference setting
-
-***
-
-# AI Keyboard - Complete Module Documentation
-## Part 7: System Integration & Advanced Intelligence (Modules 61-70)
-
-> **Document Version:** 1.0  
-> **Date:** January 30, 2026, 1:40 AM IST  
-> **Scope:** Final modules covering system integration and advanced features  
-> **Purpose:** Complete the 70-module architecture
-
-***
-
-## Module 61: API Gateway & Rate Limiter
-
-### Overview
-The API Gateway manages **all external API calls** (LLM providers, services) with rate limiting, retry logic, and failover.[^13_1]
-
-### Core Responsibilities
-
-#### 61.1 Request Router
-Routes requests to appropriate providers:
-
-**Provider selection**:
-```
-
-User preference: Cloud-first mode
-Request type: Text completion
-
-Routing decision:
-
-1. Check cloud availability (ping)
-2. Check rate limits (not exceeded)
-3. Route to: OpenAI GPT-4 (primary)
-4. Fallback: Anthropic Claude (secondary)
-5. Fallback: Local Phi-3 (tertiary)
-```
-
-**Load balancing**:
-- Multiple API keys: Rotate to distribute load
-- Provider health: Route away from slow/failing providers
-- Cost optimization: Use cheaper models when quality sufficient
-
-#### 61.2 Rate Limit Enforcer
-Prevents API quota exhaustion:
-
-**Rate limits by provider**:
-```
-
-OpenAI GPT-4:
-
-- Requests: 3,500/minute
-- Tokens: 90,000/minute
-- Current: 245/min requests, 18,000/min tokens
-- Status: ✅ Healthy (7% capacity)
-
-Anthropic Claude:
-
-- Requests: 1,000/minute
-- Tokens: 50,000/minute
-- Current: 89/min requests, 5,200/min tokens
-- Status: ✅ Healthy (9% capacity)
-
-```
-
-**Throttling strategies**:
-- Queue requests if approaching limit
-- Spread requests over time (avoid bursts)
-- Priority queue: User-initiated > background tasks
-- Reject low-priority if limit reached
-
-**User-level rate limiting**:
-- Free tier: 100 requests/day
-- Premium: 10,000 requests/day
-- Enterprise: Unlimited
-
-#### 61.3 Retry Logic
-Handles transient failures:
-
-**Retry strategy**:
-```
-
-Attempt 1: Send request
-├─ Success: Return response
-└─ Failure: Wait 1 second, retry
-
-Attempt 2: Retry request
-├─ Success: Return response
-└─ Failure: Wait 2 seconds, retry
-
-Attempt 3: Final retry
-├─ Success: Return response
-└─ Failure: Fallback to local LLM
-
-Exponential backoff: 1s, 2s, 4s, 8s...
-Maximum retries: 3
-Total timeout: 15 seconds
-
-```
-
-**Retryable errors**:
-- Network timeout
-- 429 Rate limit (wait and retry)
-- 500 Server error (temporary)
-- 503 Service unavailable
-
-**Non-retryable errors**:
-- 400 Bad request (fix request, don't retry)
-- 401 Unauthorized (auth issue)
-- 404 Not found (wrong endpoint)
-
-#### 61.4 Circuit Breaker
-Prevents cascading failures:
-
-**Circuit breaker states**:
-
-**Closed** (normal operation):
-- All requests pass through
-- Monitor failure rate
-- If failures exceed threshold: Open circuit
-
-**Open** (failure mode):
-- All requests fail fast (don't wait)
-- Route to fallback immediately
-- After timeout period: Try half-open
-
-**Half-open** (testing):
-- Allow limited requests through
-- If successful: Close circuit (back to normal)
-- If failed: Open circuit again (still broken)
-
-**Example scenario**:
-```
-
-10:00 AM: OpenAI API responding normally (Closed)
-10:15 AM: 5 consecutive failures detected (Open circuit)
-10:15 AM: All requests route to Claude (fallback)
-10:20 AM: Half-open - test request to OpenAI
-10:20 AM: Success! Circuit closed, resume normal routing
-
-```
-
-#### 61.5 Cost Tracker
-Monitors API usage costs:
-
-**Cost calculation**:
-```
-
-OpenAI GPT-4 pricing:
-
-- Input: \$0.03 per 1K tokens
-- Output: \$0.06 per 1K tokens
-
-User session costs:
-├─ Requests: 47
-├─ Input tokens: 94,000 (94K)
-├─ Output tokens: 23,500 (23.5K)
-├─ Input cost: 94 × \$0.03 = \$2.82
-├─ Output cost: 23.5 × \$0.06 = \$1.41
-└─ Total: \$4.23 this session
-
-Daily costs: \$28.47
-Monthly projection: \$854
-
-```
-
-**Budget alerts**:
-- Warn at 80% of budget
-- Throttle at 90% of budget
-- Hard stop at 100% of budget
-- Suggest downgrade to local model
-
-***
-
-## Module 62: A/B Testing Framework
-
-### Overview
-The A/B Testing Framework enables **controlled experiments** to improve AI Keyboard features through data-driven decisions.[^13_2]
-
-### Core Responsibilities
-
-#### 62.1 Experiment Manager
-Creates and manages experiments:
-
-**Experiment structure**:
-```
-
-Experiment: "Adaptive Debounce Timing"
-├─ Hypothesis: Mood-based debounce improves acceptance
-├─ Groups:
-│  ├─ Control (50%): Fixed 500ms debounce
-│  └─ Treatment (50%): Adaptive 300-1200ms
-├─ Metrics:
-│  ├─ Primary: Acceptance rate
-│  ├─ Secondary: Time to accept
-│  └─ Guard: Latency perception
-├─ Duration: 2 weeks
-└─ Status: Active
-
-```
-
-**User assignment**:
-- Random assignment at first use
-- Sticky assignment (same user stays in group)
-- Stratified sampling (ensure balance across user types)
-- Exclusions (power users, beta testers)
-
-#### 62.2 Variant Distributor
-Assigns users to experiment groups:
-
-**Assignment logic**:
-```python
-def assign_variant(user_id, experiment_id):
-    # Hash user ID for deterministic assignment
-    hash_val = hash(f"{user_id}_{experiment_id}")
-    
-    # Map to 0-100 range
-    bucket = hash_val % 100
-    
-    # Assign based on split percentages
-    if bucket < 50:
-        return "control"
-    else:
-        return "treatment"
-```
-
-**Multi-experiment handling**:
-
-- User can be in multiple experiments simultaneously
-- Orthogonal experiments (independent features)
-- Prevent conflicting experiments
-- Track interaction effects
-
-
-#### 62.3 Metrics Collector
-
-Gathers experiment data:
-
-**Tracked metrics**:
-
-```
-Per suggestion:
-├─ Shown timestamp
-├─ Accepted/dismissed
-├─ Time to decision
-├─ Variant (control/treatment)
-├─ User context (app, mood)
-└─ Suggestion quality
-
-Aggregated:
-├─ Acceptance rate by variant
-├─ Average time to accept
-├─ Latency percentiles
-├─ User satisfaction (NPS surveys)
-└─ Retention impact
-```
-
-**Statistical analysis**:
-
-```
-Experiment: Adaptive Debounce
-├─ Control group:
-│  ├─ Users: 5,000
-│  ├─ Acceptance rate: 68.2%
-│  ├─ Avg time to accept: 1.8s
-│  └─ Confidence: 95%
-├─ Treatment group:
-│  ├─ Users: 5,000
-│  ├─ Acceptance rate: 72.5%
-│  ├─ Avg time to accept: 1.5s
-│  └─ Confidence: 95%
-├─ Difference: +4.3% acceptance (p < 0.01)
-└─ Decision: ✅ Ship treatment to all users
-```
-
-
-#### 62.4 Winner Selector
-
-Determines experiment outcomes:
-
-**Decision criteria**:
-
-- Statistical significance (p < 0.05)
-- Practical significance (meaningful improvement)
-- No regression on guard metrics
-- Consistent across user segments
-- Positive user feedback
-
-**Rollout strategy**:
-
-```
-1. Winner identified: Treatment variant
-2. Gradual rollout:
-   - Week 1: 10% of remaining users
-   - Week 2: 25% of remaining users
-   - Week 3: 50% of remaining users
-   - Week 4: 100% (full deployment)
-3. Monitor for issues during rollout
-4. Rollback capability maintained
-```
-
-
-***
-
-## Module 63: Telemetry \& Analytics Engine
-
-### Overview
-
-The Telemetry \& Analytics Engine collects **anonymous usage data** to improve system performance and user experience.[^13_2]
-
-### Core Responsibilities
-
-#### 63.1 Anonymous Event Collector
-
-Gathers usage events:
-
-**Event types**:
-
-```
-Session events:
-- app_opened
-- app_closed
-- session_duration
-- apps_used
-
-Suggestion events:
-- suggestion_shown
-- suggestion_accepted
-- suggestion_dismissed
-- acceptance_time
-
-Performance events:
-- llm_latency
-- ngram_latency
-- ui_render_time
-- error_occurred
-
-Feature events:
-- voice_input_used
-- command_mode_opened
-- rewrite_triggered
-- grammar_check_run
-```
-
-**Privacy-safe collection**:
-
-```
-✅ Collected:
-- Event type and timestamp
-- Feature used
-- Performance metrics
-- Error codes
-- Anonymous user ID (random UUID)
-
-❌ Never collected:
-- Actual text content
-- Personal information
-- Email addresses
-- Document names
-- URLs visited
-```
-
-
-#### 63.2 Aggregate Statistics Calculator
-
-Computes summary metrics:
-
-**Daily aggregates**:
-
-```
-Date: 2026-01-29
-├─ Active users: 12,847
-├─ Sessions: 28,392
-├─ Suggestions shown: 487,234
-├─ Acceptance rate: 71.3%
-├─ Avg session duration: 28 min
-├─ Total time saved: 8,234 hours
-├─ P95 latency: 185ms
-└─ Error rate: 0.12%
-```
-
-**Trend analysis**:
-
-- Week-over-week growth
-- Feature adoption rates
-- Performance trends
-- Quality metrics evolution
-
-
-#### 63.3 Cohort Analyzer
-
-Compares user segments:
-
-**User cohorts**:
-
-```
-By user type:
-├─ Developers: 35% of users
-│  ├─ Top feature: Code completion
-│  └─ Acceptance: 74%
-├─ Writers: 28% of users
-│  ├─ Top feature: Grammar check
-│  └─ Acceptance: 69%
-└─ Business users: 37% of users
-   ├─ Top feature: Email assist
-   └─ Acceptance: 68%
-
-By acquisition date:
-├─ January cohort: 3,245 users (retention: 82%)
-├─ December cohort: 2,891 users (retention: 78%)
-└─ November cohort: 2,456 users (retention: 75%)
-```
-
-**Insight generation**:
-
-- Which cohorts have highest engagement?
-- What features drive retention?
-- Where do users struggle?
-- What improvements would help most?
-
-
-#### 63.4 Dashboard Reporter
-
-Visualizes analytics:
-
-**Real-time dashboard**:
-
-```
-┌─────────────────────────────────────────┐
-│ AI Keyboard Analytics Dashboard         │
-├─────────────────────────────────────────┤
-│ Active Users (Last 24h): 12,847 (+5.2%) │
-│ Acceptance Rate: 71.3% (+1.8%)          │
-│ Avg Latency: 142ms (-8ms)               │
-│ Error Rate: 0.12% (-0.03%)              │
-├─────────────────────────────────────────┤
-│ Feature Usage:                           │
-│ ████████████████░░░░ Text completion 78% │
-│ ███████████░░░░░░░░░ Grammar check 58%   │
-│ ██████░░░░░░░░░░░░░░ Voice input 32%     │
-│ ████░░░░░░░░░░░░░░░░ Command mode 21%    │
-├─────────────────────────────────────────┤
-│ Top Issues:                              │
-│ 1. Cloud latency spikes (3 PM - 4 PM)   │
-│ 2. Code completion accuracy (Java)       │
-│ 3. Voice recognition (noisy environments)│
-└─────────────────────────────────────────┘
-```
-
-
-***
-
-## Module 64: User Onboarding System
-
-### Overview
-
-The User Onboarding System provides **guided first-time experience** to help new users understand and configure AI Keyboard.[^13_2]
-
-### Core Responsibilities
-
-#### 64.1 Welcome Flow
-
-Introduces new users:
-
-**Onboarding steps**:
-
-```
-Step 1: Welcome screen
-"Welcome to AI Keyboard! Let's personalize your experience."
-[Next]
-
-Step 2: Role selection
-"What best describes you?"
-○ Developer / Engineer
-○ Writer / Content Creator
-○ Business Professional
-○ Student
-○ Other
-[Continue]
-
-Step 3: Writing style
-"How formal is your typical writing?"
-Casual [━━━━●━━━━━] Formal
-[Continue]
-
-Step 4: Feature tour
-"Key features:" (with animations)
-- Smart suggestions as you type
-- Grammar and spell check
-- Voice input
-- Cross-app context awareness
-[Next]
-
-Step 5: Privacy settings
-"Your privacy matters"
-- Data stays on device by default
-- Cloud features optional
-- Manage blocked apps
-[Configure] [Skip]
-
-Step 6: Ready!
-"You're all set! Start typing to see AI suggestions."
-[Start Using AI Keyboard]
-```
-
-
-#### 64.2 Interactive Tutorial
-
-Teaches features through practice:
-
-**Tutorial missions**:
-
-```
-Mission 1: "Accept your first suggestion"
-├─ Open any text app
-├─ Start typing: "The quarterly"
-├─ Wait for suggestion
-├─ Press Tab to accept
-└─ ✅ Complete! (+10 XP)
-
-Mission 2: "Use voice input"
-├─ Click microphone icon
-├─ Say something
-├─ Review transcription
-├─ Insert text
-└─ ✅ Complete! (+15 XP)
-
-Mission 3: "Rewrite text"
-├─ Type any sentence
-├─ Select the text
-├─ Press Ctrl+Shift+R
-├─ Choose "Make it formal"
-└─ ✅ Complete! (+20 XP)
-```
-
-**Gamification elements**:
-
-- Progress bar (3 of 10 missions)
-- Points for completing tutorials
-- Badges for milestones
-- Encouragement messages
-
-
-#### 64.3 Contextual Tips
-
-Shows help at relevant moments:
-
-**Just-in-time tips**:
-
-```
-User types slowly with many backspaces
-→ Tip appears: "💡 Tip: Let AI help! Pause after typing 
-   a few words to see suggestions."
-
-User dismisses 5 suggestions in a row
-→ Tip: "Not liking the suggestions? Try Command Mode 
-   (Ctrl+Shift+K) to customize."
-
-User switches between apps frequently
-→ Tip: "AI Keyboard notices you're working across apps. 
-   It uses this context to give better suggestions."
-
-First time in code editor
-→ Tip: "Code mode activated! AI understands your code 
-   structure and imports."
-```
-
-**Tip management**:
-
-- Show each tip maximum 3 times
-- Respect user dismissals ("Don't show again")
-- Adaptive timing (not during focused work)
-- Skippable (X button)
-
-
-#### 64.4 Progress Tracker
-
-Monitors onboarding completion:
-
-**Progress metrics**:
-
-```
-User: new_user_123
-Onboarding progress: 65%
-
-Completed:
-✅ Welcome flow
-✅ Role selection
-✅ First suggestion accepted
-✅ Voice input tried
-
-Remaining:
-⬜ Grammar check used
-⬜ Command mode explored
-⬜ Settings customized
-
-Engagement score: 8/10 (high)
-Time to completion: 12 minutes (good)
-```
-
-
-***
-
-## Module 65: Feedback \& Rating System
-
-### Overview
-
-The Feedback \& Rating System collects **user satisfaction data** to guide improvements.[^13_2]
-
-### Core Responsibilities
-
-#### 65.1 In-App Feedback Collector
-
-Gathers user opinions:
-
-**Feedback triggers**:
-
-```
-After 50 accepted suggestions:
-"How's AI Keyboard working for you?"
-😞 😐 😊 😄 😍
-[Optional: Tell us more...]
-
-After dismissing suggestion 3 times in a row:
-"We notice you're dismissing suggestions. 
-What's not working?"
-○ Not relevant
-○ Wrong tone
-○ Too formal/casual
-○ Other: ___________
-[Submit]
-
-Weekly check-in:
-"Quick question: Would you recommend 
-AI Keyboard to a colleague?"
-0 (Not at all) [━━━━━━━━━━] 10 (Definitely)
-[Submit]
-```
-
-**Feedback channels**:
-
-- In-app surveys (quick, contextual)
-- Feedback button (always available)
-- Email surveys (detailed, periodic)
-- User interviews (opt-in, in-depth)
-
-
-#### 65.2 NPS Calculator
-
-Measures user satisfaction:
-
-**Net Promoter Score**:
-
-```
-Question: "How likely are you to recommend 
-AI Keyboard to a colleague?"
-
-Responses (0-10 scale):
-├─ Detractors (0-6): 8% of users
-├─ Passives (7-8): 22% of users
-└─ Promoters (9-10): 70% of users
-
-NPS = % Promoters - % Detractors
-NPS = 70% - 8% = 62
-
-Score interpretation:
-- 62 is "Good" (50-70 range)
-- Industry average: 35
-- Top products: 70+
-- Goal: Reach 75+ NPS
-```
-
-
-#### 65.3 Feature Request Tracker
-
-Manages user suggestions:
-
-**Request collection**:
-
-```
-User submits: "Add support for Markdown formatting"
-├─ Category: Feature request
-├─ Upvotes: 47 users
-├─ Status: Under consideration
-├─ Team notes: "Aligns with roadmap Q2"
-└─ ETA: Q2 2026
-```
-
-**Request prioritization**:
-
-- Voting: Users upvote requests
-- Impact: How many users benefit?
-- Effort: Development cost estimate
-- Alignment: Fits product vision?
-
-**Public roadmap**:
-
-```
-📋 Planned Features
-
-Q1 2026:
-✅ Multi-language support (Shipped!)
-✅ Offline mode improvements (Shipped!)
-🚧 Voice commands expansion (In progress)
-
-Q2 2026:
-📅 Markdown formatting support
-📅 Custom dictionaries
-📅 Team collaboration features
-
-Future:
-💡 Real-time collaboration
-💡 Plugin ecosystem
-💡 Advanced code intelligence
-```
-
-
-#### 65.4 Sentiment Analyzer
-
-Analyzes feedback tone:
-
-**Sentiment classification**:
-
-```
-Feedback: "AI Keyboard is amazing! Saves me so much time."
-Sentiment: Positive (0.92)
-Key topics: Time savings, satisfaction
-Action: Use as testimonial
-
-Feedback: "Suggestions are often irrelevant in code mode"
-Sentiment: Negative (0.23)
-Key topics: Code completion, relevance
-Action: Prioritize code mode improvements
-
-Feedback: "It's okay, sometimes helpful"
-Sentiment: Neutral (0.55)
-Key topics: Mixed experience
-Action: Investigate use cases, improve consistency
-```
-
-**Trend monitoring**:
-
-- Weekly sentiment score
-- Sentiment by feature
-- Improvement opportunities
-- Success stories
-
-***
-
-## Module 66: Backup \& Recovery System
-
-### Overview
-
-The Backup \& Recovery System ensures **user data safety** and enables restoration after failures.[^13_1]
-
-### Core Responsibilities
-
-#### 66.1 Automatic Backup
-
-Regularly saves user data:
-
-**Backup schedule**:
-
-```
-STM (Short-term memory):
-- Auto-save every 5 minutes (while typing)
-- Backup to local disk
-- Discarded at session end
-- Purpose: Crash recovery
-
-LTM (Long-term memory):
-- Daily backup to local disk
-- Weekly backup to cloud (if enabled)
-- Retained for 30 days
-- Purpose: Data preservation
-
-Settings:
-- Backup on every change
-- Sync to cloud immediately (if online)
-- Retained indefinitely
-- Purpose: Cross-device sync
-```
-
-**Backup storage**:
-
-```
-Local backups:
-C:\Users\[User]\AppData\Local\AIKeyboard\backups\
-├─ stm_autosave_2026-01-30_01-35.json
-├─ ltm_daily_2026-01-29.db
-├─ ltm_daily_2026-01-28.db
-├─ settings_2026-01-30.json
-└─ ...
-
-Cloud backups (encrypted):
-- s3://ai-keyboard-backups/user_12345/
-  ├─ ltm_2026-01-29.db.encrypted
-  ├─ ltm_2026-01-22.db.encrypted
-  └─ settings.json.encrypted
-```
-
-
-#### 66.2 Crash Recovery
-
-Restores state after unexpected shutdown:
-
-**Recovery process**:
-
-```
-App restart after crash:
-1. Detect abnormal shutdown (no clean exit flag)
-2. Look for STM autosave files
-3. Present recovery dialog:
-
-   "AI Keyboard crashed. Recover your work?"
-   
-   Found unsaved data from:
-   - Microsoft Word: Q1_Report.docx (3 min ago)
-   - Slack: #engineering channel (1 min ago)
-   
-   [Recover] [Discard]
-
-4. If [Recover]:
-   - Restore STM state
-   - Load contexts
-   - Continue where user left off
-
-5. If [Discard]:
-   - Delete autosave
-   - Start fresh session
-```
-
-**Data integrity checks**:
-
-- Verify backup file not corrupted
-- Check timestamps (reject old backups)
-- Validate JSON structure
-- Report if recovery impossible
-
-
-#### 66.3 Data Export
-
-Enables user data portability:
-
-**Export formats**:
-
-```
-Export options:
-1. Full backup (ZIP file)
-   ├─ profile.json (user profile)
-   ├─ patterns.json (learned patterns)
-   ├─ sessions.csv (session history)
-   ├─ statistics.json (metrics)
-   └─ settings.json (preferences)
-
-2. Statistics only (CSV)
-   - Session data
-   - Acceptance rates
-   - Time saved metrics
-
-3. Settings only (JSON)
-   - All preferences
-   - App configurations
-   - Blocked apps list
-```
-
-**Export process**:
-
-```
-User clicks "Export My Data"
-1. Generate export package
-2. Encrypt with user password
-3. Create ZIP file
-4. Download: "ai_keyboard_data_2026-01-30.zip"
-5. Show confirmation: "✅ Data exported successfully"
-```
-
-
-#### 66.4 Import \& Migration
-
-Restores from backups:
-
-**Import scenarios**:
-
-**New device setup**:
-
-```
-User installs on new computer
-1. Login to account
-2. Prompt: "Restore from cloud backup?"
-3. Select backup date
-4. Download and decrypt
-5. Import settings, patterns, profile
-6. Ready to use with learned preferences
-```
-
-**Account migration**:
-
-```
-User creates new account, wants to transfer data
-1. Export from old account
-2. Login to new account
-3. Import data file
-4. Merge or replace existing data
-5. Complete migration
-```
-
-
-***
-
-## Module 67: Notification Manager
-
-### Overview
-
-The Notification Manager handles **all user-facing alerts** without being intrusive [file:4].
-
-### Core Responsibilities
-
-#### 67.1 Toast Notification System
-
-Shows brief, non-blocking messages:
-
-**Notification types**:
-
-```
-Success notifications:
-✅ "Settings saved"
-✅ "Suggestion accepted"
-✅ "Data synced successfully"
-
-Info notifications:
-ℹ️ "Switched to offline mode"
-ℹ️ "Voice input ready"
-ℹ️ "Updates available"
-
-Warning notifications:
-⚠️ "Approaching rate limit"
-⚠️ "Cloud latency high, using local"
-⚠️ "Battery low, reducing features"
-
-Error notifications:
-❌ "Sync failed, will retry"
-❌ "Voice input unavailable"
-❌ "Cannot connect to server"
-```
-
-**Display properties**:
-
-- Duration: 3-5 seconds
-- Position: Bottom-right corner
-- Non-modal: Doesn't block typing
-- Dismissible: Click X to close
-- Stacking: Multiple notifications queue
-
-
-#### 67.2 System Tray Integration
-
-Provides persistent status indicator:
-
-**Tray icon states**:
-
-```
-Icon states:
-🟢 Green: AI active, all systems normal
-🟡 Yellow: AI active, some issues (slow network)
-🔴 Red: AI paused or critical error
-⚪ Gray: AI disabled by user
-🔵 Blue pulse: Processing/thinking
-
-Context menu:
-├─ Status: ✅ Active
-├─ Acceptance rate: 71%
-├─ Time saved today: 47 min
-├─ ────────────────────
-├─ ⏸️ Pause AI
-├─ ⚙️ Settings
-├─ 📊 Statistics
-├─ 💬 Send Feedback
-├─ ℹ️ About
-└─ ❌ Exit
-```
-
-**Notifications in tray**:
-
-- Badge counter for unread notifications
-- Click tray icon to view missed notifications
-- Persistent until acknowledged
-
-
-#### 67.3 Priority Queue
-
-Manages notification importance:
-
-**Priority levels**:
-
-```
-Critical (show immediately):
-- Security alerts
-- Data loss prevention
-- Account issues
-
-High (show soon, max 10s delay):
-- Feature unavailable
-- Sync failures
-- Update available
-
-Normal (queue, show when appropriate):
-- Tips and suggestions
-- Feature discoveries
-- General info
-
-Low (weekly digest):
-- Usage statistics
-- Achievements
-- Feature highlights
-```
-
-**Smart timing**:
-
-- Don't interrupt during focused typing
-- Wait for natural pauses
-- Batch low-priority notifications
-- Respect "Do Not Disturb" mode
-
-
-#### 67.4 Do Not Disturb Mode
-
-Silences non-essential notifications:
-
-**DND triggers**:
-
-- User manually enables
-- Presentation mode detected (fullscreen apps)
-- After hours (user-configured schedule)
-- High typing activity (in flow state)
-
-**DND behavior**:
-
-```
-When DND active:
-✅ Allow: Critical security alerts
-✅ Allow: AI functionality (suggestions continue)
-❌ Block: Tips and tutorials
-❌ Block: Feature announcements
-❌ Block: Statistics updates
-❌ Block: Non-critical errors
-
-Notifications queued:
-- Show summary when DND ends
-- "While you were focused: 3 notifications"
-```
-
-
-***
-
-## Module 68: Plugin Architecture
-
-### Overview
-
-The Plugin Architecture enables **extensibility** through third-party plugins and integrations [file:2].
-
-### Core Responsibilities
-
-#### 68.1 Plugin Loader
-
-Discovers and loads plugins:
-
-**Plugin structure**:
-
-```
-Plugin: "Grammar Pro Advanced"
-├─ manifest.json (metadata)
-├─ main.js (entry point)
-├─ rules/ (custom grammar rules)
-├─ models/ (additional models)
-└─ assets/ (UI elements)
-
-Manifest:
-{
-  "name": "Grammar Pro Advanced",
-  "version": "1.2.0",
-  "author": "GrammarTech Inc.",
-  "api_version": "2.0",
-  "permissions": ["grammar_engine", "suggestions"],
-  "entry_point": "main.js"
-}
-```
-
-**Loading process**:
-
-```
-1. Scan plugins directory
-2. Read manifest files
-3. Validate API version compatibility
-4. Check permissions
-5. Load plugin code (sandboxed)
-6. Initialize plugin
-7. Register hooks
-8. Enable plugin functionality
-```
-
-
-#### 68.2 Plugin API
-
-Provides interfaces for extensions:
-
-**Available hooks**:
-
-```
-Suggestion hooks:
-- onBeforeSuggestion(context) → modify context
-- onAfterSuggestion(suggestion) → modify suggestion
-- onSuggestionAccepted(suggestion) → track usage
-- onSuggestionDismissed(suggestion) → learn rejection
-
-Grammar hooks:
-- registerGrammarRule(rule) → add custom rule
-- onGrammarCheck(text) → run custom checks
-- onErrorDetected(error) → suggest fixes
-
-UI hooks:
-- registerCommand(name, handler) → add menu item
-- addSettingsPanel(component) → add settings UI
-- showCustomNotification(message) → display message
-
-Data hooks:
-- onSessionStart() → initialize
-- onSessionEnd() → cleanup
-- onAppSwitch(app) → app-specific behavior
-```
-
-**Example plugin**:
-
-```javascript
-// Plugin: Domain-Specific Vocabulary
-class MedicalTermsPlugin {
-  onLoad() {
-    // Register custom dictionary
-    this.registerVocabulary([
-      "myocardial infarction",
-      "cerebrovascular accident",
-      "hypertension"
-    ]);
-  }
-  
-  onBeforeSuggestion(context) {
-    // Boost medical terms if in medical context
-    if (context.app === "MedicalRecords") {
-      context.vocabularyBoost = "medical";
-    }
-    return context;
-  }
-}
-```
-
-
-#### 68.3 Sandboxing \& Security
-
-Isolates plugins for safety:
-
-**Security measures**:
-
-- Plugins run in isolated context (no direct system access)
-- Permission system (request capabilities explicitly)
-- API rate limiting (prevent abuse)
-- Code signing (verify authentic plugins)
-- Review process (manual approval before publication)
-
-**Permission examples**:
-
-```
-Low-risk permissions (auto-granted):
-- suggestions: Modify suggestions
-- grammar: Add grammar rules
-- ui: Add UI elements
-
-Medium-risk permissions (user approval):
-- clipboard: Access clipboard
-- network: Make external requests
-- files: Read/write user files
-
-High-risk permissions (admin approval):
-- system: System-level access
-- processes: Monitor other apps
-- keylogging: Raw keyboard access
-```
-
-
-#### 68.4 Plugin Marketplace
-
-Distributes plugins:
-
-**Marketplace features**:
-
-```
-Plugin listing:
-┌────────────────────────────────────────┐
-│ 🎯 Grammar Pro Advanced        ⭐ 4.8  │
-│ by GrammarTech Inc.                    │
-│                                        │
-│ Advanced grammar checking with         │
-│ domain-specific rules.                 │
-│                                        │
-│ 10,000+ users | Premium $4
-<span style="display:none">[^13_3][^13_4][^13_5]</span>
-
-<div align="center">⁂</div>
-
-[^13_1]: AI_KEYBOARD_ENHANCED_FEATURES_REPORT.md
-[^13_2]: ai_keyboard_sol.md
-[^13_3]: CORE_INTELLIGENCE_DESIGN.md
-[^13_4]: GRAMMARLY_TECHNICAL_RESEARCH.md
-[^13_5]: SOLUTION_DECISIONS.md```
 
