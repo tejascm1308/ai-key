@@ -546,7 +546,7 @@ Based on the four documents, here's the comprehensive module breakdown of your A
 - Selected text monitor
 
 
-### 16. **Inline UI Renderer**[^2_4]
+### 16. **Tooltip UI Renderer**[^2_4]
 
 - Page-native icon injector
 - Tooltip renderer (matches browser style)
@@ -1186,7 +1186,7 @@ Based on all five documents including the new **Enhanced Features Report**, here
 - Selected text monitor
 
 
-### 33. **Inline UI Renderer**[^4_5]
+### 33. **Tooltip UI Renderer**[^4_5]
 
 - Page-native icon injector
 - Tooltip renderer (matches browser style)
@@ -1533,7 +1533,7 @@ Based on all five documents including the new **Enhanced Features Report**, here
 
 - **Dual modes**: Default (automatic) + Command (user-triggered)[^4_1]
 - **Two-section UI**: N-gram words + LLM sentences[^4_1]
-- **Direct editing**: Click to edit suggestions inline[^4_1]
+- **Direct editing**: Click to edit suggestions in suggestion box only[^4_1]
 - **Real-time errors**: Spelling/grammar with underlines[^4_1]
 - **Emoji processing**: LLM-directed, context-aware[^4_1]
 - **Code mode**: Multi-file analysis, 8+ languages[^4_1]
@@ -4178,14 +4178,14 @@ The Direct Suggestion Editor allows users to **modify suggestions before accepti
 
 ### Core Responsibilities
 
-#### 11.1 Inline Editing Mode[^8_5]
+#### 11.1 in suggestion box Editing Mode[^8_5]
 
 Transforms suggestion into editable text:
 
 **Activation**:
 
 - User clicks directly on suggested text (not icon)
-- Suggestion becomes editable inline
+- Suggestion becomes editable 
 - Cursor appears in suggestion text
 - Background changes to indicate edit mode (light blue highlight)
 
@@ -7361,7 +7361,7 @@ Simple completions (one line):
 
 **Characteristics**:
 
-- Inline suggestion (appears on same line as cursor)
+- tooltip suggestions (appears on the caret position in a small block like structure)
 - Gray italic text (distinguishes from actual code)
 - Preserves syntax highlighting if possible
 - Accepts with Tab key
@@ -7705,11 +7705,11 @@ Tracks text selections in browser:
 
 ***
 
-## Module 32: Inline UI Renderer
+## Module 32: Tooltip UI Renderer
 
 ### Overview
 
-The Inline UI Renderer creates **browser-native suggestion interfaces** that blend seamlessly with web pages. Unlike desktop overlays, these render within the page DOM using web technologies.[^10_1]
+The Tooltip UI Renderer creates **browser-native suggestion interfaces** that blend seamlessly with web pages. Unlike desktop overlays, these render within the page DOM using web technologies.[^10_1]
 
 ### Core Responsibilities
 
